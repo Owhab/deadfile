@@ -35,7 +35,7 @@ function renderList(files: FileItem[], selectedIndex: number) {
   clearScreen();
   console.log(chalk.cyan('🗑️  Interactive File Deletion\n'));
   console.log(chalk.gray('Use ↑/↓ to navigate, SPACE to toggle selection, ENTER to delete, ESC to exit\n'));
-  console.log(chalk.gray('Selected files will be moved to .deadfile-trash\n'));
+  console.log(chalk.gray('Selected files will be moved to .codeprune-trash\n'));
   
   const allSelected = files.every(f => f.selected);
   const noneSelected = files.every(f => !f.selected);
@@ -108,14 +108,14 @@ async function interactiveDelete(files: FileItem[]): Promise<FileItem[]> {
 const program = new Command();
 
 program
-  .name('deadfile')
-  .description('A CLI tool to detect unused files in JS/TS projects')
+  .name('codeprune')
+  .description('A CLI tool to detect and clean up unused files and imports in JS/TS projects')
   .version('1.0.0');
 
 program
   .command('init [framework]')
-  .description('Initialize deadfile.config.json (framework: next, react, react-native, node, vue, svelte, express)')
-  .option('-o, --output <path>', 'output file path', 'deadfile.config.json')
+  .description('Initialize codeprune.config.json (framework: next, react, react-native, node, vue, svelte, express)')
+  .option('-o, --output <path>', 'output file path', 'codeprune.config.json')
   .action(async (framework, options) => {
     const fs = await import('fs');
     const frameworks = ['next', 'react', 'react-native', 'node', 'vue', 'svelte', 'express'];
@@ -183,17 +183,17 @@ program
 
 program
   .command('restore')
-  .description('Restore deleted files from .deadfile-trash')
+  .description('Restore deleted files from .codeprune-trash')
   .option('-a, --all', 'restore all files')
   .option('-f, --file <name>', 'restore specific file')
   .action(async (options) => {
     const fs = await import('fs');
     const cwd = process.cwd();
-    const trashDir = path.resolve(cwd, '.deadfile-trash');
-    const manifestPath = path.resolve(trashDir, '.deadfile-manifest.json');
+    const trashDir = path.resolve(cwd, '.codeprune-trash');
+    const manifestPath = path.resolve(trashDir, '.codeprune-manifest.json');
 
     if (!fs.existsSync(trashDir)) {
-      console.log(chalk.yellow('No .deadfile-trash folder found.'));
+      console.log(chalk.yellow('No .codeprune-trash folder found.'));
       return;
     }
 
@@ -207,7 +207,7 @@ program
     }
 
     if (options.all) {
-      const files = fs.readdirSync(trashDir).filter(f => f !== '.deadfile-manifest.json');
+      const files = fs.readdirSync(trashDir).filter(f => f !== '.codeprune-manifest.json');
       if (files.length === 0) {
         console.log(chalk.yellow('No files to restore.'));
         return;
@@ -265,13 +265,13 @@ program
         console.error(chalk.red(`Failed to restore: ${e.message}`));
       }
     } else {
-      const files = fs.readdirSync(trashDir).filter(f => f !== '.deadfile-manifest.json');
+      const files = fs.readdirSync(trashDir).filter(f => f !== '.codeprune-manifest.json');
       if (files.length === 0) {
         console.log(chalk.yellow('No files to restore.'));
         return;
       }
 
-      console.log(chalk.cyan('Files in .deadfile-trash:\n'));
+      console.log(chalk.cyan('Files in .codeprune-trash:\n'));
       for (const file of files) {
         const original = manifest[file] || file.replace(/_/g, path.sep);
         console.log(`  ${chalk.gray(file)} → ${original}`);
@@ -382,9 +382,9 @@ program
           }
           
           console.log('');
-          console.log(chalk.cyan(`🗑️  Moving ${toDelete.length} file(s) to .deadfile-trash...`));
-          const trashDir = path.resolve(cwd, '.deadfile-trash');
-          const manifestPath = path.resolve(trashDir, '.deadfile-manifest.json');
+          console.log(chalk.cyan(`🗑️  Moving ${toDelete.length} file(s) to .codeprune-trash...`));
+          const trashDir = path.resolve(cwd, '.codeprune-trash');
+          const manifestPath = path.resolve(trashDir, '.codeprune-manifest.json');
           if (!fs.existsSync(trashDir)) {
             fs.mkdirSync(trashDir);
           }
@@ -412,12 +412,12 @@ program
           }
 
           fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-          console.log(chalk.green('✅ Cleanup complete! (Check .deadfile-trash to recover if needed)'));
+          console.log(chalk.green('✅ Cleanup complete! (Check .codeprune-trash to recover if needed)'));
         } else {
           console.log('');
-          console.log(chalk.cyan('🗑️  Moving unused files to .deadfile-trash...'));
-          const trashDir = path.resolve(cwd, '.deadfile-trash');
-          const manifestPath = path.resolve(trashDir, '.deadfile-manifest.json');
+          console.log(chalk.cyan('🗑️  Moving unused files to .codeprune-trash...'));
+          const trashDir = path.resolve(cwd, '.codeprune-trash');
+          const manifestPath = path.resolve(trashDir, '.codeprune-manifest.json');
           if (!fs.existsSync(trashDir)) {
             fs.mkdirSync(trashDir);
           }
@@ -441,7 +441,7 @@ program
           }
 
           fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-          console.log(chalk.green('✅ Cleanup complete! (Check .deadfile-trash to recover if needed)'));
+          console.log(chalk.green('✅ Cleanup complete! (Check .codeprune-trash to recover if needed)'));
         }
       }
     }

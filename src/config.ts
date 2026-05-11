@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-export interface DeadFileConfig {
+export interface CodePruneConfig {
   include: string[];
   exclude: string[];
   extensions: string[];
@@ -9,7 +9,7 @@ export interface DeadFileConfig {
   ignore: string[];
 }
 
-const DEFAULT_CONFIG: DeadFileConfig = {
+const DEFAULT_CONFIG: CodePruneConfig = {
   include: ['src'],
   exclude: ['node_modules', '.next', 'dist', 'build'],
   extensions: ['.js', '.ts', '.tsx', '.jsx', '.mjs', '.cjs'],
@@ -17,10 +17,10 @@ const DEFAULT_CONFIG: DeadFileConfig = {
   ignore: [],
 };
 
-export function loadConfig(customPath?: string): DeadFileConfig {
+export function loadConfig(customPath?: string): CodePruneConfig {
   const configPath = customPath 
     ? path.resolve(process.cwd(), customPath)
-    : path.resolve(process.cwd(), 'deadfile.config.json');
+    : path.resolve(process.cwd(), 'codeprune.config.json');
 
   if (fs.existsSync(configPath)) {
     try {
