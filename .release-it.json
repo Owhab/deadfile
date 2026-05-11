@@ -1,0 +1,12 @@
+{
+  "npm": {
+    "publish": true,
+    "access": "public"
+  },
+  "github": {
+    "release": true
+  },
+  "hooks": {
+    "before:publish": "npm run build"
+  }
+}
