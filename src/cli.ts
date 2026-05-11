@@ -113,6 +113,75 @@ program
   .version('1.0.0');
 
 program
+  .command('init [framework]')
+  .description('Initialize deadfile.config.json (framework: next, react, react-native, node, vue, svelte, express)')
+  .option('-o, --output <path>', 'output file path', 'deadfile.config.json')
+  .action(async (framework, options) => {
+    const fs = await import('fs');
+    const frameworks = ['next', 'react', 'react-native', 'node', 'vue', 'svelte', 'express'];
+    const f = framework?.toLowerCase();
+
+    if (!f || !frameworks.includes(f)) {
+      console.log(chalk.yellow(`Please specify a framework: ${frameworks.join(', ')}`));
+      console.log(chalk.gray('Usage: deadfile init <framework>'));
+      return;
+    }
+
+    const configs: Record<string, any> = {
+      next: {
+        include: ['src', 'app', 'pages', 'components'],
+        exclude: ['node_modules', '.next', 'out', 'public', '.git'],
+        extensions: ['.js', '.ts', '.tsx', '.jsx'],
+        entry: ['app', 'pages']
+      },
+      react: {
+        include: ['src'],
+        exclude: ['node_modules', 'dist', 'build', '.git'],
+        extensions: ['.js', '.ts', '.tsx', '.jsx'],
+        entry: ['src/main.tsx', 'src/index.tsx', 'src/App.tsx']
+      },
+      'react-native': {
+        include: ['src', 'components', 'screens'],
+        exclude: ['node_modules', 'android', 'ios', '.expo', '.git'],
+        extensions: ['.js', '.ts', '.tsx', '.jsx'],
+        entry: ['App.tsx', 'index.js', 'src/App.tsx']
+      },
+      node: {
+        include: ['src'],
+        exclude: ['node_modules', 'dist', '.git'],
+        extensions: ['.js', '.ts'],
+        entry: ['src/index.ts', 'src/main.ts', 'index.ts']
+      },
+      vue: {
+        include: ['src'],
+        exclude: ['node_modules', 'dist', '.git'],
+        extensions: ['.js', '.ts', '.vue', '.jsx', '.tsx'],
+        entry: ['src/main.ts', 'src/main.js']
+      },
+      svelte: {
+        include: ['src', 'lib'],
+        exclude: ['node_modules', 'dist', '.git'],
+        extensions: ['.js', '.ts', '.svelte'],
+        entry: ['src/main.ts', 'src/main.js', 'src/App.svelte']
+      },
+      express: {
+        include: ['src', 'routes', 'controllers', 'middleware'],
+        exclude: ['node_modules', 'dist', '.git'],
+        extensions: ['.js', '.ts'],
+        entry: ['src/index.ts', 'src/app.ts', 'app.js']
+      }
+    };
+
+    const config = configs[f];
+    const outputPath = path.resolve(process.cwd(), options.output);
+
+    fs.writeFileSync(outputPath, JSON.stringify(config, null, 2));
+    console.log(chalk.green(`✅ Created ${outputPath}`));
+    console.log(chalk.gray(`\nFramework: ${f}`));
+    console.log(chalk.gray(`Entry: ${config.entry.join(', ')}`));
+  });
+
+program
   .option('-c, --config <path>', 'custom config path')
   .option('-j, --json', 'output JSON')
   .option('-d, --delete', 'move unused files')

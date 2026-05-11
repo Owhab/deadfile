@@ -16,6 +16,24 @@ npm run build
 npm link
 ```
 
+## ⚡ Quick Start
+
+Use the `init` command to generate a config file based on your framework:
+
+```bash
+deadfile init next       # Next.js
+deadfile init react      # React (Vite/CRA)
+deadfile init react-native
+deadfile init vue
+deadfile init svelte
+deadfile init express
+deadfile init node
+```
+
+This creates a `deadfile.config.json` with sensible defaults for your project.
+
+---
+
 ## 🔍 How to Scan Your Project
 
 Once installed globally, you can use `deadfile` in any local JS/TS project.
@@ -147,7 +165,17 @@ deadfile --fix-imports --delete
 
 ---
 
-## ⌨️ CLI Options
+## ⌨️ CLI Commands
+
+### Init
+```bash
+deadfile init <framework>     # Create config file
+deadfile init react -o custom.json  # Custom output path
+```
+
+Supported frameworks: `next`, `react`, `react-native`, `node`, `vue`, `svelte`, `express`
+
+### Options
 
 | Option | Alias | Description |
 |--------|-------|-------------|
