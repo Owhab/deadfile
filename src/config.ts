@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 
 export interface CodePruneConfig {
-  include: string[];
   exclude: string[];
   extensions: string[];
   entry: string[];
@@ -10,10 +9,9 @@ export interface CodePruneConfig {
 }
 
 const DEFAULT_CONFIG: CodePruneConfig = {
-  include: ['src'],
-  exclude: ['node_modules', '.next', 'dist', 'build'],
+  exclude: ['node_modules', '.next', 'dist', 'build', '.git', 'coverage', '.cache'],
   extensions: ['.js', '.ts', '.tsx', '.jsx', '.mjs', '.cjs'],
-  entry: ['src/pages', 'src/app', 'src/index.ts', 'src/index.tsx', 'src/index.js'],
+  entry: ['src/pages', 'src/app', 'src/index.ts', 'src/index.tsx', 'src/index.js', 'src/main.ts', 'src/main.tsx', 'app', 'pages'],
   ignore: [],
 };
 

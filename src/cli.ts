@@ -160,43 +160,36 @@ program
 
     const configs: Record<string, any> = {
       next: {
-        include: ['src', 'app', 'pages', 'components'],
         exclude: ['node_modules', '.next', 'out', 'public', '.git'],
         extensions: ['.js', '.ts', '.tsx', '.jsx'],
-        entry: ['app', 'pages']
+        entry: ['app', 'pages', 'src']
       },
       react: {
-        include: ['src'],
         exclude: ['node_modules', 'dist', 'build', '.git'],
         extensions: ['.js', '.ts', '.tsx', '.jsx'],
         entry: ['src/main.tsx', 'src/index.tsx', 'src/App.tsx']
       },
       'react-native': {
-        include: ['src', 'components', 'screens'],
         exclude: ['node_modules', 'android', 'ios', '.expo', '.git'],
         extensions: ['.js', '.ts', '.tsx', '.jsx'],
         entry: ['App.tsx', 'index.js', 'src/App.tsx']
       },
       node: {
-        include: ['src'],
         exclude: ['node_modules', 'dist', '.git'],
         extensions: ['.js', '.ts'],
         entry: ['src/index.ts', 'src/main.ts', 'index.ts']
       },
       vue: {
-        include: ['src'],
         exclude: ['node_modules', 'dist', '.git'],
         extensions: ['.js', '.ts', '.vue', '.jsx', '.tsx'],
         entry: ['src/main.ts', 'src/main.js']
       },
       svelte: {
-        include: ['src', 'lib'],
         exclude: ['node_modules', 'dist', '.git'],
         extensions: ['.js', '.ts', '.svelte'],
         entry: ['src/main.ts', 'src/main.js', 'src/App.svelte']
       },
       express: {
-        include: ['src', 'routes', 'controllers', 'middleware'],
         exclude: ['node_modules', 'dist', '.git'],
         extensions: ['.js', '.ts'],
         entry: ['src/index.ts', 'src/app.ts', 'app.js']

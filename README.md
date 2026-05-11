@@ -43,17 +43,15 @@ In the root directory of the project you want to scan, create a `codeprune.confi
 **For Next.js:**
 ```json
 {
-  "include": ["src", "app", "pages", "components"],
   "exclude": ["node_modules", ".next", "out", "public"],
   "extensions": [".js", ".ts", ".tsx", ".jsx"],
-  "entry": ["app", "pages"] 
+  "entry": ["app", "pages", "src"]
 }
 ```
 
 **For React (Vite/Create React App):**
 ```json
 {
-  "include": ["src"],
   "exclude": ["node_modules", "dist", "build"],
   "extensions": [".js", ".ts", ".tsx", ".jsx"],
   "entry": ["src/main.tsx", "src/index.tsx"]
@@ -63,7 +61,6 @@ In the root directory of the project you want to scan, create a `codeprune.confi
 **For React Native:**
 ```json
 {
-  "include": ["src", "components", "screens"],
   "exclude": ["node_modules", "android", "ios", ".expo"],
   "extensions": [".js", ".ts", ".tsx", ".jsx"],
   "entry": ["App.tsx", "index.js"]
