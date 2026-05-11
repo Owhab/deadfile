@@ -1,16 +1,10 @@
 {
   "exclude": [
-    "node_modules",
-    "dist",
-    ".git"
+    "node_modules", "android", "ios", ".expo", ".git", "coverage", ".cache",
+    "babel.config.js", "metro.config.js", "eslint.config.js", "tailwind.config.js", ".npm"
   ],
-  "extensions": [
-    ".js",
-    ".ts"
-  ],
+  "extensions": [".js", ".ts", ".tsx", ".jsx"],
   "entry": [
-    "src/index.ts",
-    "src/main.ts",
-    "index.ts"
+    "App.tsx", "App.js", "index.js", "index.ts", "src/App.tsx", "src/index.ts", "src/main.ts"
   ]
 }

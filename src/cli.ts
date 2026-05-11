@@ -182,39 +182,44 @@ program
 
     const configs: Record<string, any> = {
       next: {
-        exclude: ['node_modules', '.next', 'out', 'public', '.git'],
+        exclude: ['node_modules', '.next', 'out', 'public', '.git', 'coverage', '.cache',
+          'babel.config.js', 'eslint.config.js', 'tailwind.config.js', 'metro.config.js'],
         extensions: ['.js', '.ts', '.tsx', '.jsx'],
-        entry: ['app', 'pages', 'src']
+        entry: ['app', 'pages', 'src', 'index.js', 'App.tsx', 'src/index.ts', 'src/main.ts']
       },
       react: {
-        exclude: ['node_modules', 'dist', 'build', '.git'],
+        exclude: ['node_modules', 'dist', 'build', '.git', 'coverage', '.cache',
+          'babel.config.js', 'eslint.config.js', 'tailwind.config.js', 'vite.config.ts', 'vite.config.js'],
         extensions: ['.js', '.ts', '.tsx', '.jsx'],
-        entry: ['src/main.tsx', 'src/index.tsx', 'src/App.tsx']
+        entry: ['App.tsx', 'App.js', 'index.js', 'index.tsx', 'src/main.tsx', 'src/index.tsx', 'src/App.tsx']
       },
       'react-native': {
-        exclude: ['node_modules', 'android', 'ios', '.expo', '.git'],
+        exclude: ['node_modules', 'android', 'ios', '.expo', '.git', 'coverage', '.cache',
+          'babel.config.js', 'metro.config.js', 'eslint.config.js', 'tailwind.config.js', '.npm'],
         extensions: ['.js', '.ts', '.tsx', '.jsx'],
-        entry: ['App.tsx', 'index.js', 'src/App.tsx']
+        entry: ['App.tsx', 'App.js', 'index.js', 'index.ts', 'src/App.tsx', 'src/index.ts']
       },
       node: {
-        exclude: ['node_modules', 'dist', '.git'],
+        exclude: ['node_modules', 'dist', '.git', 'coverage', '.cache'],
         extensions: ['.js', '.ts'],
-        entry: ['src/index.ts', 'src/main.ts', 'index.ts']
+        entry: ['index.js', 'index.ts', 'src/index.ts', 'src/main.ts', 'src/app.ts', 'app.js']
       },
       vue: {
-        exclude: ['node_modules', 'dist', '.git'],
+        exclude: ['node_modules', 'dist', '.git', 'coverage', '.cache',
+          'vite.config.ts', 'vite.config.js', 'eslint.config.js'],
         extensions: ['.js', '.ts', '.vue', '.jsx', '.tsx'],
-        entry: ['src/main.ts', 'src/main.js']
+        entry: ['App.vue', 'src/main.ts', 'src/main.js', 'src/App.vue', 'main.ts', 'main.js']
       },
       svelte: {
-        exclude: ['node_modules', 'dist', '.git'],
-        extensions: ['.js', '.ts', '.svelte'],
-        entry: ['src/main.ts', 'src/main.js', 'src/App.svelte']
+        exclude: ['node_modules', 'dist', '.git', 'coverage', '.cache',
+          'svelte.config.js', 'vite.config.ts', 'eslint.config.js'],
+        extensions: ['.js', '.ts', '.svelte', '.jsx', '.tsx'],
+        entry: ['App.svelte', 'src/main.ts', 'src/main.js', 'src/App.svelte', 'src/routes', 'routes']
       },
       express: {
-        exclude: ['node_modules', 'dist', '.git'],
+        exclude: ['node_modules', 'dist', '.git', 'coverage', '.cache'],
         extensions: ['.js', '.ts'],
-        entry: ['src/index.ts', 'src/app.ts', 'app.js']
+        entry: ['index.js', 'index.ts', 'src/index.ts', 'src/main.ts', 'src/app.ts', 'app.js', 'server.js']
       }
     };
 
