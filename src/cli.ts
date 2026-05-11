@@ -7,7 +7,7 @@ import { loadConfig } from './config.js';
 import { scanFiles } from './scanner.js';
 import { ImportParser } from './parser.js';
 import { buildGraph, findUnusedFiles } from './graph.js';
-import { ImportFixer } from './fixer.js';
+import { ImportFixer, type FileAnalysisResult } from './fixer.js';
 
 interface FileItem {
   path: string;
@@ -359,10 +359,47 @@ program
       console.log('');
       console.log(chalk.green(`✅ Done in ${timeTaken}s (Scanned ${result.totalFiles} files)`));
 
+      const fixer = new ImportFixer(config.extensions);
+      let totalUnusedImports = 0;
+      let totalUnusedDeclarations = 0;
+      const filesWithIssues: { file: string; imports: string[]; declarations: string[] }[] = [];
+
+      for (const file of files) {
+        const analysis = fixer.analyzeFile(file);
+        if (analysis && (analysis.unusedImports.length > 0 || analysis.unusedDeclarations.length > 0)) {
+          totalUnusedImports += analysis.unusedImports.length;
+          totalUnusedDeclarations += analysis.unusedDeclarations.length;
+          filesWithIssues.push({
+            file: path.relative(cwd, file),
+            imports: analysis.unusedImports,
+            declarations: analysis.unusedDeclarations
+          });
+        }
+      }
+
+      if (filesWithIssues.length > 0) {
+        console.log('');
+        console.log(chalk.cyan('📦 Unused Imports & Declarations:'));
+        for (const f of filesWithIssues) {
+          if (f.imports.length > 0) {
+            console.log(chalk.yellow(`  ${f.file}:`));
+            for (const imp of f.imports) {
+              console.log(chalk.gray(`    import ${imp}`));
+            }
+          }
+          if (f.declarations.length > 0) {
+            console.log(chalk.yellow(`  ${f.file}:`));
+            for (const decl of f.declarations) {
+              console.log(chalk.gray(`    ${decl}`));
+            }
+          }
+        }
+        console.log(chalk.gray(`  Total: ${totalUnusedImports} unused import(s), ${totalUnusedDeclarations} unused declaration(s)`));
+      }
+
       if (options.fixImports && files.length > 0) {
         console.log('');
         console.log(chalk.cyan('🔧 Fixing imports and declarations...'));
-        const fixer = new ImportFixer(config.extensions);
         let fixedCount = 0;
         let removedImports = 0;
         let removedDeclarations = 0;

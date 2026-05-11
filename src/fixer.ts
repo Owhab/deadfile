@@ -9,6 +9,12 @@ interface FileFixResult {
   organized: boolean;
 }
 
+export interface FileAnalysisResult {
+  file: string;
+  unusedImports: string[];
+  unusedDeclarations: string[];
+}
+
 export class ImportFixer {
   private project: Project;
   private extensions: string[];
@@ -58,6 +64,34 @@ export class ImportFixer {
     result.organized = true;
 
     sourceFile.saveSync();
+    return result;
+  }
+
+  public analyzeFile(filePath: string): FileAnalysisResult | null {
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+
+    const sourceFile = this.project.addSourceFileAtPath(filePath);
+    const result: FileAnalysisResult = {
+      file: filePath,
+      unusedImports: [],
+      unusedDeclarations: [],
+    };
+
+    const unusedImports = this.findUnusedImports(sourceFile);
+    for (const imp of unusedImports) {
+      result.unusedImports.push(imp.specifier);
+    }
+
+    const unusedDecls = this.findUnusedDeclarations(sourceFile);
+    for (const decl of unusedDecls) {
+      const name = decl.getName();
+      if (name) {
+        result.unusedDeclarations.push(name);
+      }
+    }
+
     return result;
   }
 
