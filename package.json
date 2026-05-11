@@ -1,13 +1,13 @@
 {
-  "name": "deadfiles-cli",
+  "name": "codeprune",
   "version": "1.0.0",
-  "description": "A fast, reliable CLI tool to detect unused files in your JS/TS projects",
+  "description": "A fast, reliable CLI tool to detect and clean up unused files and imports in your JS/TS projects",
   "main": "dist/cli.js",
   "files": [
     "dist"
   ],
   "bin": {
-    "deadfiles-cli": "dist/cli.js"
+    "codeprune": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",

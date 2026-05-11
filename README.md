@@ -1,8 +1,8 @@
-# 💀 DeadFile
+# ✂️ CodePrune
 
-A fast, reliable CLI tool to detect and safely clean up unused files in your JS/TS projects (React, Next.js, React Native, Node.js). 
+A fast, reliable CLI tool to detect and safely clean up unused files and imports in your JS/TS projects (React, Next.js, React Native, Node.js). 
 
-DeadFile parses your imports and builds a complete dependency graph starting from your entry points, flagging any source file that is completely unreachable.
+CodePrune parses your imports and builds a complete dependency graph starting from your entry points, flagging any source file that is completely unreachable.
 
 ## 🚀 Installation
 
@@ -10,7 +10,7 @@ For now, the easiest way to use this is to link it globally on your machine:
 
 ```bash
 git clone <repository_url>
-cd deadfile
+cd codeprune
 npm install
 npm run build
 npm link
@@ -21,25 +21,25 @@ npm link
 Use the `init` command to generate a config file based on your framework:
 
 ```bash
-deadfile init next       # Next.js
-deadfile init react      # React (Vite/CRA)
-deadfile init react-native
-deadfile init vue
-deadfile init svelte
-deadfile init express
-deadfile init node
+codeprune init next       # Next.js
+codeprune init react      # React (Vite/CRA)
+codeprune init react-native
+codeprune init vue
+codeprune init svelte
+codeprune init express
+codeprune init node
 ```
 
-This creates a `deadfile.config.json` with sensible defaults for your project.
+This creates a `codeprune.config.json` with sensible defaults for your project.
 
 ---
 
 ## 🔍 How to Scan Your Project
 
-Once installed globally, you can use `deadfile` in any local JS/TS project.
+Once installed globally, you can use `codeprune` in any local JS/TS project.
 
 ### 1. Create a Configuration File
-In the root directory of the project you want to scan, create a `deadfile.config.json` file. This tells DeadFile where to look and where your dependency graph starts.
+In the root directory of the project you want to scan, create a `codeprune.config.json` file. This tells CodePrune where to look and where your dependency graph starts.
 
 **For Next.js:**
 ```json
@@ -74,19 +74,19 @@ In the root directory of the project you want to scan, create a `deadfile.config
 ### 2. Run the Scanner
 Run the following command in your terminal:
 ```bash
-deadfile
+codeprune
 ```
 
 You can also output the results in JSON format (ideal for CI/CD pipelines):
 ```bash
-deadfile --json
+codeprune --json
 ```
 
 ---
 
 ## 🛠️ How to Fix (Clean Up) Unused Files
 
-Once you have run the scanner, DeadFile will output a list of unused files. 
+Once you have run the scanner, CodePrune will output a list of unused files. 
 
 ### Step 1: Review the Output
 The CLI groups files into two categories:
@@ -94,24 +94,24 @@ The CLI groups files into two categories:
 * **⚠️ Possibly Unused:** Files that are only referenced via dynamic imports (e.g., `import('./MyComponent')`). Static analysis cannot confidently guarantee these are unused, so verify manually!
 
 ### Step 2: Delete Unused Files using the `--delete` flag
-DeadFile features a built-in safe delete mode. Rather than permanently deleting your files immediately, it moves them to a local trash folder.
+CodePrune features a built-in safe delete mode. Rather than permanently deleting your files immediately, it moves them to a local trash folder.
 
 Run the scan with the delete flag:
 ```bash
-deadfile --delete
+codeprune --delete
 ```
 
 This will automatically:
 1. Scan your project.
 2. Identify the `❌ Unused Files`.
-3. Move all unused files out of your workspace and into a `.deadfile-trash` folder in your project's root.
+3. Move all unused files out of your workspace and into a `.codeprune-trash` folder in your project's root.
 
 ### Interactive Mode (Keyboard Navigation)
 
 For more control over which files to delete, use the interactive mode:
 
 ```bash
-deadfile --delete --interactive
+codeprune --delete --interactive
 ```
 
 This opens an interactive file selector where you can:
@@ -124,31 +124,31 @@ This opens an interactive file selector where you can:
 | `Enter` | Delete selected files |
 | `Escape` | Cancel and exit |
 
-Files are moved to `.deadfile-trash` for safe recovery.
+Files are moved to `.codeprune-trash` for safe recovery.
 
 **What to check after running:**
 1. Run your build/dev server (`npm run dev`) to ensure nothing broke. 
-2. If a file was accidentally flagged as unused and your app broke, restore it using `deadfile restore --all` or `deadfile restore --file "path/to/file"`
-3. Once you verify your project builds fine, you can permanently delete the `.deadfile-trash` folder.
+2. If a file was accidentally flagged as unused and your app broke, restore it using `codeprune restore --all` or `codeprune restore --file "path/to/file"`
+3. Once you verify your project builds fine, you can permanently delete the `.codeprune-trash` folder.
 
 ### Restore Deleted Files
 
-Use the `restore` command to recover files from `.deadfile-trash`:
+Use the `restore` command to recover files from `.codeprune-trash`:
 
 ```bash
-deadfile restore              # List files in trash
-deadfile restore --all       # Restore all files
-deadfile restore --file src/components/Button.tsx  # Restore specific file
+codeprune restore              # List files in trash
+codeprune restore --all       # Restore all files
+codeprune restore --file src/components/Button.tsx  # Restore specific file
 ```
 
 ---
 
 ## 🔧 Fix Unused Code
 
-DeadFile can also clean up unused imports, variables, functions, classes, and more:
+CodePrune can also clean up unused imports, variables, functions, classes, and more:
 
 ```bash
-deadfile --fix-imports
+codeprune --fix-imports
 ```
 
 This will:
@@ -158,7 +158,7 @@ This will:
 
 You can combine with other options:
 ```bash
-deadfile --fix-imports --delete
+codeprune --fix-imports --delete
 ```
 
 ---
@@ -179,17 +179,17 @@ deadfile --fix-imports --delete
 
 ### Init
 ```bash
-deadfile init <framework>     # Create config file
-deadfile init react -o custom.json  # Custom output path
+codeprune init <framework>     # Create config file
+codeprune init react -o custom.json  # Custom output path
 ```
 
 Supported frameworks: `next`, `react`, `react-native`, `node`, `vue`, `svelte`, `express`
 
 ### Restore
 ```bash
-deadfile restore              # List files in trash
-deadfile restore --all        # Restore all files
-deadfile restore -f <file>    # Restore specific file
+codeprune restore              # List files in trash
+codeprune restore --all        # Restore all files
+codeprune restore -f <file>    # Restore specific file
 ```
 
 ### Options
@@ -198,6 +198,6 @@ deadfile restore -f <file>    # Restore specific file
 |--------|-------|-------------|
 | `--config` | `-c` | Custom config file path |
 | `--json` | `-j` | Output results in JSON format |
-| `--delete` | `-d` | Move unused files to `.deadfile-trash` |
+| `--delete` | `-d` | Move unused files to `.codeprune-trash` |
 | `--interactive` | `-i` | Interactive file selection (use with `--delete`) |
 | `--fix-imports` | `-f` | Remove unused imports and organize imports |
