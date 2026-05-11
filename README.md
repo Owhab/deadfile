@@ -88,10 +88,49 @@ This will automatically:
 2. Identify the `❌ Unused Files`.
 3. Move all unused files out of your workspace and into a `.deadfile-trash` folder in your project's root.
 
+### Interactive Mode (Keyboard Navigation)
+
+For more control over which files to delete, use the interactive mode:
+
+```bash
+deadfile --delete --interactive
+```
+
+This opens an interactive file selector where you can:
+
+| Key | Action |
+|-----|--------|
+| `↑` / `↓` | Navigate through files |
+| `Space` | Toggle file selection |
+| `Tab` | Select/deselect all files |
+| `Enter` | Delete selected files |
+| `Escape` | Cancel and exit |
+
+Files are moved to `.deadfile-trash` for safe recovery.
+
 **What to check after running:**
 1. Run your build/dev server (`npm run dev`) to ensure nothing broke. 
 2. If a file was accidentally flagged as unused and your app broke, simply restore it from the `.deadfile-trash` folder.
 3. Once you verify your project builds fine, you can permanently delete the `.deadfile-trash` folder.
+
+---
+
+## 🔧 Fix Unused Imports
+
+DeadFile can also clean up unused imports within your files and organize them:
+
+```bash
+deadfile --fix-imports
+```
+
+This will:
+1. **Remove unused imports** - Identifies imports that are never used in the file and removes them
+2. **Organize imports** - Groups and sorts imports (external modules first, then relative imports, alphabetically sorted)
+
+You can combine with other options:
+```bash
+deadfile --fix-imports --delete
+```
 
 ---
 
@@ -104,3 +143,15 @@ This will automatically:
 | `extensions`| `string[]` | File extensions to track (`.js, .tsx, .ts, etc.`). |
 | `entry` | `string[]` | The starting points of your app. Can be specific files (`src/index.js`) or directories (`src/pages`). |
 | `ignore` | `string[]` | Specific folders/patterns to skip within included directories. |
+
+---
+
+## ⌨️ CLI Options
+
+| Option | Alias | Description |
+|--------|-------|-------------|
+| `--config` | `-c` | Custom config file path |
+| `--json` | `-j` | Output results in JSON format |
+| `--delete` | `-d` | Move unused files to `.deadfile-trash` |
+| `--interactive` | `-i` | Interactive file selection (use with `--delete`) |
+| `--fix-imports` | `-f` | Remove unused imports and organize imports |
