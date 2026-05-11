@@ -115,9 +115,9 @@ Files are moved to `.deadfile-trash` for safe recovery.
 
 ---
 
-## 🔧 Fix Unused Imports
+## 🔧 Fix Unused Code
 
-DeadFile can also clean up unused imports within your files and organize them:
+DeadFile can also clean up unused imports, variables, functions, classes, and more:
 
 ```bash
 deadfile --fix-imports
@@ -125,7 +125,8 @@ deadfile --fix-imports
 
 This will:
 1. **Remove unused imports** - Identifies imports that are never used in the file and removes them
-2. **Organize imports** - Groups and sorts imports (external modules first, then relative imports, alphabetically sorted)
+2. **Remove unused declarations** - Removes unused variables, functions, classes, interfaces, and type aliases
+3. **Organize imports** - Groups and sorts imports (external modules first, then relative imports, alphabetically sorted)
 
 You can combine with other options:
 ```bash

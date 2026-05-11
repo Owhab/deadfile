@@ -1,20 +1,11 @@
-import { Project, SyntaxKind, Node, ImportDeclaration, ImportSpecifier, SourceFile } from 'ts-morph';
+import { Project, SyntaxKind, Node, ImportDeclaration, ImportSpecifier, SourceFile, VariableDeclaration, FunctionDeclaration, ClassDeclaration, TypeAliasDeclaration, InterfaceDeclaration, MethodDeclaration, PropertyDeclaration, ParameterDeclaration, BindingElement } from 'ts-morph';
 import path from 'path';
 import fs from 'fs';
-
-interface ImportInfo {
-  name: string;
-  specifier: string;
-  isDefault: boolean;
-  isNamespace: boolean;
-  namedImports: string[];
-  start: number;
-  end: number;
-}
 
 interface FileFixResult {
   file: string;
   removedImports: string[];
+  removedDeclarations: string[];
   organized: boolean;
 }
 
@@ -42,6 +33,7 @@ export class ImportFixer {
     const result: FileFixResult = {
       file: filePath,
       removedImports: [],
+      removedDeclarations: [],
       organized: false,
     };
 
@@ -53,11 +45,70 @@ export class ImportFixer {
       result.removedImports.push(spec.specifier);
     }
 
+    const unusedDecls = this.findUnusedDeclarations(sourceFile);
+    for (const decl of unusedDecls) {
+      const name = decl.getName();
+      decl.remove();
+      if (name) {
+        result.removedDeclarations.push(name);
+      }
+    }
+
     this.organizeImports(sourceFile);
     result.organized = true;
 
     sourceFile.saveSync();
     return result;
+  }
+
+  private findUnusedDeclarations(sourceFile: SourceFile): any[] {
+    const usedNames = new Set<string>();
+    const declarations = new Map<string, any>();
+
+    sourceFile.forEachDescendant((node) => {
+      if (Node.isIdentifier(node)) {
+        const text = node.getText();
+        if (text && /^[a-zA-Z_]/.test(text)) {
+          usedNames.add(text);
+        }
+      }
+    });
+
+    for (const func of sourceFile.getFunctions()) {
+      const name = func.getName();
+      if (name) declarations.set(name, func);
+    }
+
+    for (const cls of sourceFile.getClasses()) {
+      const name = cls.getName();
+      if (name) declarations.set(name, cls);
+    }
+
+    for (const iface of sourceFile.getInterfaces()) {
+      const name = iface.getName();
+      if (name) declarations.set(name, iface);
+    }
+
+    for (const typeAlias of sourceFile.getTypeAliases()) {
+      const name = typeAlias.getName();
+      if (name) declarations.set(name, typeAlias);
+    }
+
+    for (const varStmt of sourceFile.getVariableStatements()) {
+      for (const decl of varStmt.getDeclarations()) {
+        const name = decl.getName();
+        if (name) declarations.set(name, decl);
+      }
+    }
+
+    const unused: any[] = [];
+    for (const [name, decl] of declarations) {
+      if (!usedNames.has(name)) {
+        unused.push(decl);
+      }
+    }
+
+    return unused;
   }
 
   private findUnusedImports(sourceFile: SourceFile): { importDecl: ImportDeclaration; specifier: string }[] {
