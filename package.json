@@ -1,10 +1,13 @@
 {
-  "name": "deadfile",
+  "name": "deadfiles-cli",
   "version": "1.0.0",
-  "description": "",
-  "main": "dist/index.js",
+  "description": "A fast, reliable CLI tool to detect unused files in your JS/TS projects",
+  "main": "dist/cli.js",
+  "files": [
+    "dist"
+  ],
   "bin": {
-    "deadfile": "./dist/cli.js"
+    "deadfiles-cli": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",

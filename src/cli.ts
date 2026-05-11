@@ -2,10 +2,107 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import path from 'path';
+import readline from 'readline';
 import { loadConfig } from './config.js';
 import { scanFiles } from './scanner.js';
 import { ImportParser } from './parser.js';
 import { buildGraph, findUnusedFiles } from './graph.js';
+
+interface FileItem {
+  path: string;
+  selected: boolean;
+}
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+function enableRawMode() {
+  (process.stdin as any).setRawMode?.(true);
+}
+
+function disableRawMode() {
+  (process.stdin as any).setRawMode?.(false);
+}
+
+function clearScreen() {
+  console.clear();
+}
+
+function renderList(files: FileItem[], selectedIndex: number) {
+  clearScreen();
+  console.log(chalk.cyan('🗑️  Interactive File Deletion\n'));
+  console.log(chalk.gray('Use ↑/↓ to navigate, SPACE to toggle selection, ENTER to delete, ESC to exit\n'));
+  console.log(chalk.gray('Selected files will be moved to .deadfile-trash\n'));
+  
+  const allSelected = files.every(f => f.selected);
+  const noneSelected = files.every(f => !f.selected);
+  
+  console.log(chalk.gray(`[${allSelected ? 'x' : noneSelected ? ' ' : '-'}] Select All / Deselect All`));
+  console.log('');
+  
+  files.forEach((file, index) => {
+    const isSelected = index === selectedIndex;
+    const marker = file.selected ? chalk.green('✓') : ' ';
+    const line = isSelected ? chalk.cyan('› ') + marker + ' ' + file.path : '  ' + marker + ' ' + file.path;
+    console.log(line);
+  });
+  
+  console.log('');
+  const selectedCount = files.filter(f => f.selected).length;
+  console.log(chalk.gray(`Selected: ${selectedCount} file(s) | Press ENTER to delete`));
+}
+
+async function interactiveDelete(files: FileItem[]): Promise<FileItem[]> {
+  return new Promise((resolve) => {
+    let selectedIndex = 0;
+    renderList(files, selectedIndex);
+    
+    enableRawMode();
+    
+    const cleanup = () => {
+      disableRawMode();
+      rl.close();
+    };
+    
+    process.stdin.on('data', (buf: Buffer) => {
+      const key = buf.toString();
+      
+      if (key === '\u001b') {
+        cleanup();
+        resolve(files);
+        return;
+      }
+      
+      if (key === '\r') {
+        cleanup();
+        resolve(files);
+        return;
+      }
+      
+      if (key === '\u001b[A') {
+        selectedIndex = Math.max(0, selectedIndex - 1);
+        renderList(files, selectedIndex);
+      } else if (key === '\u001b[B') {
+        selectedIndex = Math.min(files.length - 1, selectedIndex + 1);
+        renderList(files, selectedIndex);
+      } else if (key === ' ') {
+        if (selectedIndex === 0) {
+          const allSelected = files.every(f => f.selected);
+          files.forEach(f => f.selected = !allSelected);
+        } else {
+          files[selectedIndex].selected = !files[selectedIndex].selected;
+        }
+        renderList(files, selectedIndex);
+      } else if (key === '\t') {
+        const allSelected = files.every(f => f.selected);
+        files.forEach(f => f.selected = !allSelected);
+        renderList(files, selectedIndex);
+      }
+    });
+  });
+}
 
 const program = new Command();
 
@@ -62,24 +159,63 @@ program
 
       if (options.delete && result.unusedFiles.length > 0) {
         const fs = await import('fs');
-        console.log('');
-        console.log(chalk.cyan('🗑️  Moving unused files to .deadfile-trash...'));
-        const trashDir = path.resolve(cwd, '.deadfile-trash');
-        if (!fs.existsSync(trashDir)) {
-          fs.mkdirSync(trashDir);
-        }
-
-        for (const file of result.unusedFiles) {
-          const relativePath = path.relative(cwd, file);
-          const trashPath = path.resolve(trashDir, relativePath.replace(/\\|\//g, '_'));
-          try {
-            fs.renameSync(file, trashPath);
-            console.log(chalk.gray(`Moved: ${relativePath}`));
-          } catch (e: any) {
-            console.error(chalk.red(`Failed to move ${relativePath}: ${e.message}`));
+        
+        if (options.interactive) {
+          const fileItems: FileItem[] = result.unusedFiles.map(f => ({
+            path: path.relative(cwd, f),
+            selected: false
+          }));
+          
+          const selectedFiles = await interactiveDelete(fileItems);
+          const toDelete = selectedFiles.filter(f => f.selected);
+          
+          if (toDelete.length === 0) {
+            console.log(chalk.yellow('\nNo files selected. Exiting.'));
+            return;
           }
+          
+          console.log('');
+          console.log(chalk.cyan(`🗑️  Moving ${toDelete.length} file(s) to .deadfile-trash...`));
+          const trashDir = path.resolve(cwd, '.deadfile-trash');
+          if (!fs.existsSync(trashDir)) {
+            fs.mkdirSync(trashDir);
+          }
+          
+          for (const file of toDelete) {
+            const fullPath = path.resolve(cwd, file.path);
+            const trashPath = path.resolve(trashDir, file.path.replace(/\\|\//g, '_'));
+            const dir = path.dirname(trashPath);
+            if (!fs.existsSync(dir)) {
+              fs.mkdirSync(dir, { recursive: true });
+            }
+            try {
+              fs.renameSync(fullPath, trashPath);
+              console.log(chalk.gray(`Moved: ${file.path}`));
+            } catch (e: any) {
+              console.error(chalk.red(`Failed to move ${file.path}: ${e.message}`));
+            }
+          }
+          console.log(chalk.green('✅ Cleanup complete! (Check .deadfile-trash to recover if needed)'));
+        } else {
+          console.log('');
+          console.log(chalk.cyan('🗑️  Moving unused files to .deadfile-trash...'));
+          const trashDir = path.resolve(cwd, '.deadfile-trash');
+          if (!fs.existsSync(trashDir)) {
+            fs.mkdirSync(trashDir);
+          }
+
+          for (const file of result.unusedFiles) {
+            const relativePath = path.relative(cwd, file);
+            const trashPath = path.resolve(trashDir, relativePath.replace(/\\|\//g, '_'));
+            try {
+              fs.renameSync(file, trashPath);
+              console.log(chalk.gray(`Moved: ${relativePath}`));
+            } catch (e: any) {
+              console.error(chalk.red(`Failed to move ${relativePath}: ${e.message}`));
+            }
+          }
+          console.log(chalk.green('✅ Cleanup complete! (Check .deadfile-trash to recover if needed)'));
         }
-        console.log(chalk.green('✅ Cleanup complete! (Check .deadfile-trash to recover if needed)'));
       }
     }
   });
