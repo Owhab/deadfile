@@ -117,7 +117,7 @@ program
   .option('-j, --json', 'output JSON')
   .option('-d, --delete', 'move unused files')
   .option('-i, --interactive', 'confirm each delete')
-  .option('-f, --fix-imports', 'remove unused imports and organize imports')
+  .option('-f, --fix-imports', 'remove unused imports, variables, functions, classes and organize imports')
   .action(async (options) => {
     const cwd = process.cwd();
     const isJson = options.json;
@@ -161,30 +161,37 @@ program
 
       if (options.fixImports && files.length > 0) {
         console.log('');
-        console.log(chalk.cyan('🔧 Fixing imports...'));
+        console.log(chalk.cyan('🔧 Fixing imports and declarations...'));
         const fixer = new ImportFixer(config.extensions);
         let fixedCount = 0;
-        let removedCount = 0;
+        let removedImports = 0;
+        let removedDeclarations = 0;
 
         for (const file of files) {
-          const result = fixer.fixFile(file);
-          if (result) {
-            if (result.removedImports.length > 0) {
-              removedCount += result.removedImports.length;
+          const res = fixer.fixFile(file);
+          if (res) {
+            if (res.removedImports.length > 0) {
+              removedImports += res.removedImports.length;
             }
-            if (result.organized) {
+            if (res.removedDeclarations.length > 0) {
+              removedDeclarations += res.removedDeclarations.length;
+            }
+            if (res.organized) {
               fixedCount++;
             }
           }
         }
 
-        if (fixedCount > 0 || removedCount > 0) {
+        if (fixedCount > 0 || removedImports > 0 || removedDeclarations > 0) {
           console.log(chalk.green(`✅ Fixed imports in ${fixedCount} file(s)`));
-          if (removedCount > 0) {
-            console.log(chalk.yellow(`🗑️  Removed ${removedCount} unused import(s)`));
+          if (removedImports > 0) {
+            console.log(chalk.yellow(`🗑️  Removed ${removedImports} unused import(s)`));
+          }
+          if (removedDeclarations > 0) {
+            console.log(chalk.yellow(`🗑️  Removed ${removedDeclarations} unused declaration(s)`));
           }
         } else {
-          console.log(chalk.gray('No import fixes needed'));
+          console.log(chalk.gray('No fixes needed'));
         }
       }
 
