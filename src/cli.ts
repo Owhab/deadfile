@@ -7,6 +7,7 @@ import { loadConfig } from './config.js';
 import { scanFiles } from './scanner.js';
 import { ImportParser } from './parser.js';
 import { buildGraph, findUnusedFiles } from './graph.js';
+import { ImportFixer } from './fixer.js';
 
 interface FileItem {
   path: string;
@@ -116,6 +117,7 @@ program
   .option('-j, --json', 'output JSON')
   .option('-d, --delete', 'move unused files')
   .option('-i, --interactive', 'confirm each delete')
+  .option('-f, --fix-imports', 'remove unused imports and organize imports')
   .action(async (options) => {
     const cwd = process.cwd();
     const isJson = options.json;
@@ -156,6 +158,35 @@ program
 
       console.log('');
       console.log(chalk.green(`✅ Done in ${timeTaken}s (Scanned ${result.totalFiles} files)`));
+
+      if (options.fixImports && files.length > 0) {
+        console.log('');
+        console.log(chalk.cyan('🔧 Fixing imports...'));
+        const fixer = new ImportFixer(config.extensions);
+        let fixedCount = 0;
+        let removedCount = 0;
+
+        for (const file of files) {
+          const result = fixer.fixFile(file);
+          if (result) {
+            if (result.removedImports.length > 0) {
+              removedCount += result.removedImports.length;
+            }
+            if (result.organized) {
+              fixedCount++;
+            }
+          }
+        }
+
+        if (fixedCount > 0 || removedCount > 0) {
+          console.log(chalk.green(`✅ Fixed imports in ${fixedCount} file(s)`));
+          if (removedCount > 0) {
+            console.log(chalk.yellow(`🗑️  Removed ${removedCount} unused import(s)`));
+          }
+        } else {
+          console.log(chalk.gray('No import fixes needed'));
+        }
+      }
 
       if (options.delete && result.unusedFiles.length > 0) {
         const fs = await import('fs');
