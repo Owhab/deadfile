@@ -113,6 +113,37 @@ program
   .version('1.0.0');
 
 program
+  .command('help')
+  .description('Show available commands and options')
+  .action(() => {
+    console.log(`
+${chalk.cyan('✂️  CodePrune - Available Commands:')}
+
+${chalk.bold('Commands:')}
+  ${chalk.green('init [framework]')}    Initialize codeprune.config.json
+  ${chalk.green('restore')}            Restore deleted files from trash
+  ${chalk.green('help')}                Show this help message
+
+${chalk.bold('Options:')}
+  ${chalk.green('-c, --config <path>')}   Custom config file path
+  ${chalk.green('-j, --json')}             Output results in JSON format
+  ${chalk.green('-d, --delete')}           Move unused files to trash
+  ${chalk.green('-i, --interactive')}      Interactive file selection
+  ${chalk.green('-f, --fix-imports')}      Remove unused imports & organize
+  ${chalk.green('-h, --help')}             Display help
+
+${chalk.bold('Examples:')}
+  codeprune init react
+  codeprune --json
+  codeprune --delete --interactive
+  codeprune --fix-imports
+  codeprune restore --all
+
+${chalk.gray('For more info: https://github.com/yourusername/codeprune')}
+`);
+  });
+
+program
   .command('init [framework]')
   .description('Initialize codeprune.config.json (framework: next, react, react-native, node, vue, svelte, express)')
   .option('-o, --output <path>', 'output file path', 'codeprune.config.json')
@@ -123,7 +154,7 @@ program
 
     if (!f || !frameworks.includes(f)) {
       console.log(chalk.yellow(`Please specify a framework: ${frameworks.join(', ')}`));
-      console.log(chalk.gray('Usage: deadfile init <framework>'));
+      console.log(chalk.gray('Usage: codeprune init <framework>'));
       return;
     }
 

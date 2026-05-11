@@ -1,19 +1,18 @@
 # ✂️ CodePrune
 
+[![npm version](https://img.shields.io/npm/v/codeprune)](https://www.npmjs.com/package/codeprune)
+[![npm downloads](https://img.shields.io/npm/dm/codeprune)](https://www.npmjs.com/package/codeprune)
+
 A fast, reliable CLI tool to detect and safely clean up unused files and imports in your JS/TS projects (React, Next.js, React Native, Node.js). 
 
 CodePrune parses your imports and builds a complete dependency graph starting from your entry points, flagging any source file that is completely unreachable.
 
 ## 🚀 Installation
 
-For now, the easiest way to use this is to link it globally on your machine:
+Install globally via npm:
 
 ```bash
-git clone <repository_url>
-cd codeprune
-npm install
-npm run build
-npm link
+npm install -g codeprune
 ```
 
 ## ⚡ Quick Start
@@ -176,6 +175,11 @@ codeprune --fix-imports --delete
 ---
 
 ## ⌨️ CLI Commands
+
+### Help
+```bash
+codeprune help    # Show available commands and options
+```
 
 ### Init
 ```bash
