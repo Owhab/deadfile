@@ -14,11 +14,6 @@ interface FileItem {
   selected: boolean;
 }
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
 function enableRawMode() {
   (process.stdin as any).setRawMode?.(true);
 }
@@ -57,6 +52,11 @@ function renderList(files: FileItem[], selectedIndex: number) {
 
 async function interactiveDelete(files: FileItem[]): Promise<FileItem[]> {
   return new Promise((resolve) => {
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
     let selectedIndex = 0;
     renderList(files, selectedIndex);
     
@@ -229,8 +229,14 @@ program
         console.log(chalk.cyan(`🔍 Detected framework: ${chalk.bold(detected)}`));
         console.log(chalk.gray(`  Press Enter to use this or type a different framework.\n`));
         
+        const rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+        
         await new Promise<void>((resolve) => {
           rl.question(chalk.gray(`Select framework (${frameworks.join(', ')}): `), (answer) => {
+            rl.close();
             if (answer.trim()) {
               f = answer.trim().toLowerCase();
             } else {
@@ -568,9 +574,5 @@ program
       }
     }
   });
-
-process.on('exit', () => {
-  rl.close();
-});
 
 program.parse();
