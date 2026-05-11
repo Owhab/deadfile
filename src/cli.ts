@@ -182,6 +182,106 @@ program
   });
 
 program
+  .command('restore')
+  .description('Restore deleted files from .deadfile-trash')
+  .option('-a, --all', 'restore all files')
+  .option('-f, --file <name>', 'restore specific file')
+  .action(async (options) => {
+    const fs = await import('fs');
+    const cwd = process.cwd();
+    const trashDir = path.resolve(cwd, '.deadfile-trash');
+    const manifestPath = path.resolve(trashDir, '.deadfile-manifest.json');
+
+    if (!fs.existsSync(trashDir)) {
+      console.log(chalk.yellow('No .deadfile-trash folder found.'));
+      return;
+    }
+
+    let manifest: Record<string, string> = {};
+    if (fs.existsSync(manifestPath)) {
+      try {
+        manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+      } catch (e) {
+        manifest = {};
+      }
+    }
+
+    if (options.all) {
+      const files = fs.readdirSync(trashDir).filter(f => f !== '.deadfile-manifest.json');
+      if (files.length === 0) {
+        console.log(chalk.yellow('No files to restore.'));
+        return;
+      }
+
+      let restored = 0;
+      for (const file of files) {
+        const originalPath = manifest[file] || file.replace(/_/g, path.sep);
+        const trashPath = path.resolve(trashDir, file);
+        const targetDir = path.dirname(path.resolve(cwd, originalPath));
+
+        if (!fs.existsSync(targetDir)) {
+          fs.mkdirSync(targetDir, { recursive: true });
+        }
+
+        try {
+          fs.renameSync(trashPath, path.resolve(cwd, originalPath));
+          console.log(chalk.green(`Restored: ${originalPath}`));
+          restored++;
+        } catch (e: any) {
+          console.error(chalk.red(`Failed to restore ${file}: ${e.message}`));
+        }
+      }
+
+      if (fs.existsSync(manifestPath)) {
+        fs.unlinkSync(manifestPath);
+      }
+      console.log(chalk.green(`\n✅ Restored ${restored} file(s)`));
+    } else if (options.file) {
+      const fileName = options.file.replace(/\\/g, '_').replace(/\//g, '_');
+      const trashPath = path.resolve(trashDir, fileName);
+      const originalPath = manifest[fileName] || options.file;
+
+      if (!fs.existsSync(trashPath)) {
+        console.log(chalk.red(`File not found in trash: ${options.file}`));
+        return;
+      }
+
+      const targetDir = path.dirname(path.resolve(cwd, originalPath));
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+
+      try {
+        fs.renameSync(trashPath, path.resolve(cwd, originalPath));
+        console.log(chalk.green(`✅ Restored: ${originalPath}`));
+
+        delete manifest[fileName];
+        if (Object.keys(manifest).length > 0) {
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+        } else if (fs.existsSync(manifestPath)) {
+          fs.unlinkSync(manifestPath);
+        }
+      } catch (e: any) {
+        console.error(chalk.red(`Failed to restore: ${e.message}`));
+      }
+    } else {
+      const files = fs.readdirSync(trashDir).filter(f => f !== '.deadfile-manifest.json');
+      if (files.length === 0) {
+        console.log(chalk.yellow('No files to restore.'));
+        return;
+      }
+
+      console.log(chalk.cyan('Files in .deadfile-trash:\n'));
+      for (const file of files) {
+        const original = manifest[file] || file.replace(/_/g, path.sep);
+        console.log(`  ${chalk.gray(file)} → ${original}`);
+      }
+      console.log(chalk.gray('\nUse: deadfile restore --all to restore all'));
+      console.log(chalk.gray('Use: deadfile restore --file "path/to/file" to restore specific'));
+    }
+  });
+
+program
   .option('-c, --config <path>', 'custom config path')
   .option('-j, --json', 'output JSON')
   .option('-d, --delete', 'move unused files')
@@ -284,43 +384,63 @@ program
           console.log('');
           console.log(chalk.cyan(`🗑️  Moving ${toDelete.length} file(s) to .deadfile-trash...`));
           const trashDir = path.resolve(cwd, '.deadfile-trash');
+          const manifestPath = path.resolve(trashDir, '.deadfile-manifest.json');
           if (!fs.existsSync(trashDir)) {
             fs.mkdirSync(trashDir);
+          }
+
+          let manifest: Record<string, string> = {};
+          if (fs.existsSync(manifestPath)) {
+            manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
           }
           
           for (const file of toDelete) {
             const fullPath = path.resolve(cwd, file.path);
-            const trashPath = path.resolve(trashDir, file.path.replace(/\\|\//g, '_'));
+            const trashFileName = file.path.replace(/\\|\//g, '_');
+            const trashPath = path.resolve(trashDir, trashFileName);
             const dir = path.dirname(trashPath);
             if (!fs.existsSync(dir)) {
               fs.mkdirSync(dir, { recursive: true });
             }
             try {
               fs.renameSync(fullPath, trashPath);
+              manifest[trashFileName] = file.path;
               console.log(chalk.gray(`Moved: ${file.path}`));
             } catch (e: any) {
               console.error(chalk.red(`Failed to move ${file.path}: ${e.message}`));
             }
           }
+
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
           console.log(chalk.green('✅ Cleanup complete! (Check .deadfile-trash to recover if needed)'));
         } else {
           console.log('');
           console.log(chalk.cyan('🗑️  Moving unused files to .deadfile-trash...'));
           const trashDir = path.resolve(cwd, '.deadfile-trash');
+          const manifestPath = path.resolve(trashDir, '.deadfile-manifest.json');
           if (!fs.existsSync(trashDir)) {
             fs.mkdirSync(trashDir);
           }
 
+          let manifest: Record<string, string> = {};
+          if (fs.existsSync(manifestPath)) {
+            manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+          }
+
           for (const file of result.unusedFiles) {
             const relativePath = path.relative(cwd, file);
-            const trashPath = path.resolve(trashDir, relativePath.replace(/\\|\//g, '_'));
+            const trashFileName = relativePath.replace(/\\|\//g, '_');
+            const trashPath = path.resolve(trashDir, trashFileName);
             try {
               fs.renameSync(file, trashPath);
+              manifest[trashFileName] = relativePath;
               console.log(chalk.gray(`Moved: ${relativePath}`));
             } catch (e: any) {
               console.error(chalk.red(`Failed to move ${relativePath}: ${e.message}`));
             }
           }
+
+          fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
           console.log(chalk.green('✅ Cleanup complete! (Check .deadfile-trash to recover if needed)'));
         }
       }

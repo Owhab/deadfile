@@ -128,8 +128,18 @@ Files are moved to `.deadfile-trash` for safe recovery.
 
 **What to check after running:**
 1. Run your build/dev server (`npm run dev`) to ensure nothing broke. 
-2. If a file was accidentally flagged as unused and your app broke, simply restore it from the `.deadfile-trash` folder.
+2. If a file was accidentally flagged as unused and your app broke, restore it using `deadfile restore --all` or `deadfile restore --file "path/to/file"`
 3. Once you verify your project builds fine, you can permanently delete the `.deadfile-trash` folder.
+
+### Restore Deleted Files
+
+Use the `restore` command to recover files from `.deadfile-trash`:
+
+```bash
+deadfile restore              # List files in trash
+deadfile restore --all       # Restore all files
+deadfile restore --file src/components/Button.tsx  # Restore specific file
+```
 
 ---
 
@@ -174,6 +184,13 @@ deadfile init react -o custom.json  # Custom output path
 ```
 
 Supported frameworks: `next`, `react`, `react-native`, `node`, `vue`, `svelte`, `express`
+
+### Restore
+```bash
+deadfile restore              # List files in trash
+deadfile restore --all        # Restore all files
+deadfile restore -f <file>    # Restore specific file
+```
 
 ### Options
 
