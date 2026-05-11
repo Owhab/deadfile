@@ -478,4 +478,8 @@ program
     }
   });
 
+process.on('exit', () => {
+  rl.close();
+});
+
 program.parse();
