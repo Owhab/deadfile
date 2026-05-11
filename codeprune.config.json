@@ -1,3 +1,16 @@
 {
-  "entry": ["src/cli.ts"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".git"
+  ],
+  "extensions": [
+    ".js",
+    ".ts"
+  ],
+  "entry": [
+    "src/index.ts",
+    "src/main.ts",
+    "index.ts"
+  ]
 }

@@ -130,10 +130,13 @@ ${chalk.bold('Options:')}
   ${chalk.green('-d, --delete')}           Move unused files to trash
   ${chalk.green('-i, --interactive')}      Interactive file selection
   ${chalk.green('-f, --fix-imports')}      Remove unused imports & organize
+  ${chalk.green('-y, --yes')}              Auto-detect and use framework
   ${chalk.green('-h, --help')}             Display help
 
 ${chalk.bold('Examples:')}
-  codeprune init react
+  codeprune init              # Interactive selection (auto-detect)
+  codeprune init --yes        # Auto-detect and create config
+  codeprune init react       # Use specific framework
   codeprune --json
   codeprune --delete --interactive
   codeprune --fix-imports
@@ -147,16 +150,35 @@ program
   .command('init [framework]')
   .description('Initialize codeprune.config.json (framework: next, react, react-native, node, vue, svelte, express)')
   .option('-o, --output <path>', 'output file path', 'codeprune.config.json')
+  .option('-y, --yes', 'auto-detect and use framework')
   .action(async (framework, options) => {
     const fs = await import('fs');
+    const cwd = process.cwd();
     const frameworks = ['next', 'react', 'react-native', 'node', 'vue', 'svelte', 'express'];
-    const f = framework?.toLowerCase();
 
-    if (!f || !frameworks.includes(f)) {
-      console.log(chalk.yellow(`Please specify a framework: ${frameworks.join(', ')}`));
-      console.log(chalk.gray('Usage: codeprune init <framework>'));
-      return;
-    }
+    const detectFramework = (): string | null => {
+      const packageJsonPath = path.resolve(cwd, 'package.json');
+      if (fs.existsSync(packageJsonPath)) {
+        try {
+          const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+          const deps = { ...pkg.dependencies, ...pkg.devDependencies };
+          
+          if (deps['next'] || pkg.scripts?.dev?.includes('next')) return 'next';
+          if (deps['react-native']) return 'react-native';
+          if (deps['@sveltejs/kit'] || deps['svelte']) return 'svelte';
+          if (deps['vue']) return 'vue';
+          if (deps['express']) return 'express';
+          if (deps['react'] || deps['react-dom']) return 'react';
+        } catch (e) {}
+      }
+
+      if (fs.existsSync(path.resolve(cwd, 'next.config.js'))) return 'next';
+      if (fs.existsSync(path.resolve(cwd, 'vite.config.ts')) || fs.existsSync(path.resolve(cwd, 'vite.config.js'))) return 'react';
+      if (fs.existsSync(path.resolve(cwd, 'svelte.config.js'))) return 'svelte';
+      if (fs.existsSync(path.resolve(cwd, 'nuxt.config.ts'))) return 'next';
+
+      return null;
+    };
 
     const configs: Record<string, any> = {
       next: {
@@ -196,8 +218,47 @@ program
       }
     };
 
+    let f = framework?.toLowerCase();
+    const detected = detectFramework();
+
+    if (!f) {
+      if (detected && options.yes) {
+        f = detected;
+        console.log(chalk.cyan(`🔍 Detected framework: ${chalk.bold(detected)}`));
+      } else if (detected) {
+        console.log(chalk.cyan(`🔍 Detected framework: ${chalk.bold(detected)}`));
+        console.log(chalk.gray(`  Press Enter to use this or type a different framework.\n`));
+        
+        await new Promise<void>((resolve) => {
+          rl.question(chalk.gray(`Select framework (${frameworks.join(', ')}): `), (answer) => {
+            if (answer.trim()) {
+              f = answer.trim().toLowerCase();
+            } else {
+              f = detected;
+            }
+            resolve();
+          });
+        });
+      } else {
+        if (options.yes) {
+          f = 'node';
+          console.log(chalk.yellow('⚠️ Could not detect framework, using default: node'));
+        } else {
+          console.log(chalk.yellow(`Could not auto-detect framework. Please specify one:`));
+          console.log(chalk.gray(`Usage: codeprune init <${frameworks.join('|')}>`));
+          return;
+        }
+      }
+    }
+
+    if (!frameworks.includes(f)) {
+      console.log(chalk.red(`Invalid framework: ${f}`));
+      console.log(chalk.gray(`Valid options: ${frameworks.join(', ')}`));
+      return;
+    }
+
     const config = configs[f];
-    const outputPath = path.resolve(process.cwd(), options.output);
+    const outputPath = path.resolve(cwd, options.output);
 
     fs.writeFileSync(outputPath, JSON.stringify(config, null, 2));
     console.log(chalk.green(`✅ Created ${outputPath}`));

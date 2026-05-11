@@ -17,19 +17,17 @@ npm install -g codeprune
 
 ## ⚡ Quick Start
 
-Use the `init` command to generate a config file based on your framework:
+Use the `init` command to generate a config file. It auto-detects your framework from package.json:
 
 ```bash
-codeprune init next       # Next.js
-codeprune init react      # React (Vite/CRA)
-codeprune init react-native
-codeprune init vue
-codeprune init svelte
-codeprune init express
-codeprune init node
+codeprune init              # Auto-detect with interactive selection
+codeprune init --yes       # Auto-detect and create config automatically
+codeprune init react       # Use specific framework
 ```
 
 This creates a `codeprune.config.json` with sensible defaults for your project.
+
+**Supported frameworks:** Next.js, React, React Native, Vue, Svelte, Express, Node.js
 
 ---
 
@@ -180,9 +178,15 @@ codeprune help    # Show available commands and options
 
 ### Init
 ```bash
-codeprune init <framework>     # Create config file
-codeprune init react -o custom.json  # Custom output path
+codeprune init                  # Auto-detect framework (interactive)
+codeprune init --yes            # Auto-detect and create config automatically
+codeprune init react            # Use specific framework
+codeprune init -o custom.json   # Custom output path
 ```
+
+The init command auto-detects your framework from:
+- `package.json` dependencies (next, react, vue, svelte, express, etc.)
+- Config files (next.config.js, vite.config.ts, svelte.config.js)
 
 Supported frameworks: `next`, `react`, `react-native`, `node`, `vue`, `svelte`, `express`
 
