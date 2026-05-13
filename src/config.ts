@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 export interface CodePruneConfig {
+  include: string[];
   exclude: string[];
   extensions: string[];
   entry: string[];
@@ -9,6 +10,7 @@ export interface CodePruneConfig {
 }
 
 const DEFAULT_CONFIG: CodePruneConfig = {
+  include: ['src', 'app', 'pages', 'lib', 'utils', 'components', 'routes', 'screens'],
   exclude: [
     'node_modules', '.next', 'dist', 'build', '.git', 'coverage', '.cache',
     'babel.config.js', 'babel.config.cjs', 'babel.config.mjs',
