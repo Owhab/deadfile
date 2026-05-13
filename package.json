@@ -1,6 +1,6 @@
 {
   "name": "codeprune",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "A fast, reliable CLI tool to detect and clean up unused files and imports in your JS/TS projects",
   "main": "dist/cli.js",
   "files": [
