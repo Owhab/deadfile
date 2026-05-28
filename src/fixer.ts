@@ -15,6 +15,12 @@ export interface FileAnalysisResult {
   unusedDeclarations: string[];
 }
 
+interface UnusedImportEntry {
+  importDecl: ImportDeclaration;
+  specifier: string;
+  namedSpecifier?: ImportSpecifier;
+}
+
 export class ImportFixer {
   private project: Project;
   private extensions: string[];
@@ -44,11 +50,15 @@ export class ImportFixer {
     };
 
     const unusedSpecs = this.findUnusedImports(sourceFile);
-    
+
     for (const spec of unusedSpecs) {
-      const importDecl = spec.importDecl;
-      importDecl.remove();
-      result.removedImports.push(spec.specifier);
+      if (spec.namedSpecifier) {
+        spec.namedSpecifier.remove();
+        result.removedImports.push(spec.specifier);
+      } else {
+        spec.importDecl.remove();
+        result.removedImports.push(spec.specifier);
+      }
     }
 
     const unusedDecls = this.findUnusedDeclarations(sourceFile);
@@ -96,17 +106,7 @@ export class ImportFixer {
   }
 
   private findUnusedDeclarations(sourceFile: SourceFile): any[] {
-    const usedNames = new Set<string>();
     const declarations = new Map<string, any>();
-
-    sourceFile.forEachDescendant((node) => {
-      if (Node.isIdentifier(node)) {
-        const text = node.getText();
-        if (text && /^[a-zA-Z_]/.test(text)) {
-          usedNames.add(text);
-        }
-      }
-    });
 
     for (const func of sourceFile.getFunctions()) {
       const name = func.getName();
@@ -135,6 +135,18 @@ export class ImportFixer {
       }
     }
 
+    const declarationNames = new Set<string>(declarations.keys());
+    const usedNames = new Set<string>();
+
+    sourceFile.forEachDescendant((node) => {
+      if (Node.isIdentifier(node)) {
+        const text = node.getText();
+        if (text && /^[a-zA-Z_$]/.test(text) && !declarationNames.has(text)) {
+          usedNames.add(text);
+        }
+      }
+    });
+
     const unused: any[] = [];
     for (const [name, decl] of declarations) {
       if (!usedNames.has(name)) {
@@ -145,14 +157,14 @@ export class ImportFixer {
     return unused;
   }
 
-  private findUnusedImports(sourceFile: SourceFile): { importDecl: ImportDeclaration; specifier: string }[] {
-    const unused: { importDecl: ImportDeclaration; specifier: string }[] = [];
+  private findUnusedImports(sourceFile: SourceFile): UnusedImportEntry[] {
+    const unused: UnusedImportEntry[] = [];
     const usedNames = new Set<string>();
 
     sourceFile.forEachDescendant((node) => {
       if (Node.isIdentifier(node)) {
         const text = node.getText();
-        if (text && /^[a-z_]/.test(text)) {
+        if (text && /^[a-zA-Z_$]/.test(text)) {
           usedNames.add(text);
         }
       }
@@ -179,10 +191,9 @@ export class ImportFixer {
       }
 
       for (const named of namedImports) {
-        const name = named.getText();
+        const name = named.getName();
         if (!usedNames.has(name)) {
-          unused.push({ importDecl: decl, specifier });
-          break;
+          unused.push({ importDecl: decl, specifier, namedSpecifier: named });
         }
       }
     }
