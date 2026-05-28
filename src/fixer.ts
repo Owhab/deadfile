@@ -217,27 +217,28 @@ export class ImportFixer {
       }
     }
 
-    const body = sourceFile.getStatements();
-    const firstStatement = body[0];
-    
-    if (!firstStatement) return;
-
-    const insertPos = firstStatement.getStart();
     const texts: string[] = [];
 
     for (const imp of external) {
-      texts.push(imp.getFullText());
+      texts.push(imp.getFullText().trim());
       imp.remove();
     }
     for (const imp of relative) {
-      texts.push(imp.getFullText());
+      texts.push(imp.getFullText().trim());
       imp.remove();
     }
+
+    const body = sourceFile.getStatements();
+    const firstStatement = body[0];
+
+    if (!firstStatement) return;
+
+    const insertPos = firstStatement.getStart();
 
     const externalSpecs = texts.slice(0, external.length).sort();
     const relativeSpecs = texts.slice(external.length).sort();
     const sortedTexts = [...externalSpecs, ...relativeSpecs];
-    
+
     sourceFile.insertText(insertPos, sortedTexts.join('\n') + '\n\n');
   }
 }
