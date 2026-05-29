@@ -25,9 +25,7 @@ const DEFAULT_CONFIG: CodePruneConfig = {
     'index.js', 'index.ts', 'index.tsx',
     'App.tsx', 'App.js', 'App.ts',
     'src/index.js', 'src/index.ts', 'src/index.tsx', 'src/main.js', 'src/main.ts', 'src/main.tsx',
-    'src/app', 'app', 'src/pages', 'pages',
-    'src/routes', 'routes', 'src/screens', 'screens',
-    'src/components', 'components'
+    'src/app', 'app', 'src/pages', 'pages'
   ],
   ignore: [],
 };
