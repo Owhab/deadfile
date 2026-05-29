@@ -8,14 +8,21 @@ export async function scanFiles(config: CodePruneConfig, cwd: string = process.c
 
   const ignorePatterns = [
     ...config.exclude.map((ex: string) => `**/${ex}/**`),
-    ...config.ignore.map((ig: string) => `**/${ig}/**`)
+    ...config.exclude.map((ex: string) => `**/${ex}`),
+    ...config.ignore.map((ig: string) => `**/${ig}/**`),
+    '**/node_modules/**',
+    '**/.git/**',
   ];
 
-  const files = await fg(`**/*.${extPattern}`, {
+  const globPatterns = config.include.length > 0
+    ? config.include.map((dir: string) => `${dir}/**/*.${extPattern}`)
+    : [`**/*.${extPattern}`];
+
+  const files = await fg(globPatterns, {
     cwd,
     ignore: ignorePatterns,
     absolute: true,
-    dot: true,
+    dot: false,
   });
 
   return files.map(file => path.normalize(file));
