@@ -175,7 +175,7 @@ program
       if (fs.existsSync(path.resolve(cwd, 'next.config.js'))) return 'next';
       if (fs.existsSync(path.resolve(cwd, 'vite.config.ts')) || fs.existsSync(path.resolve(cwd, 'vite.config.js'))) return 'react';
       if (fs.existsSync(path.resolve(cwd, 'svelte.config.js'))) return 'svelte';
-      if (fs.existsSync(path.resolve(cwd, 'nuxt.config.ts'))) return 'next';
+      if (fs.existsSync(path.resolve(cwd, 'nuxt.config.ts'))) return 'vue';
 
       return null;
     };
