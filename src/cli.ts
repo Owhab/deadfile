@@ -379,8 +379,8 @@ program
         const original = manifest[file] || file.replace(/_/g, path.sep);
         console.log(`  ${chalk.gray(file)} → ${original}`);
       }
-      console.log(chalk.gray('\nUse: deadfile restore --all to restore all'));
-      console.log(chalk.gray('Use: deadfile restore --file "path/to/file" to restore specific'));
+      console.log(chalk.gray('\nUse: codeprune restore --all to restore all'));
+      console.log(chalk.gray('Use: codeprune restore --file "path/to/file" to restore specific'));
     }
   });
 
