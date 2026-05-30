@@ -112,14 +112,21 @@ export class ImportParser {
   }
 
   private tryResolve(resolvedPath: string): string | null {
-    // Handle ESM imports where specifier has .js but the file is .ts or .tsx
-    if (resolvedPath.endsWith('.js') && !fs.existsSync(resolvedPath)) {
-      const withoutExt = resolvedPath.slice(0, -3);
-      if (fs.existsSync(withoutExt + '.ts')) {
-        return path.normalize(withoutExt + '.ts');
-      }
-      if (fs.existsSync(withoutExt + '.tsx')) {
-        return path.normalize(withoutExt + '.tsx');
+    const esmFallbackMap: Record<string, string[]> = {
+      '.js': ['.ts', '.tsx'],
+      '.jsx': ['.tsx'],
+      '.mjs': ['.mts', '.mts'],
+      '.cjs': ['.cts'],
+    };
+
+    for (const [fromExt, toExts] of Object.entries(esmFallbackMap)) {
+      if (resolvedPath.endsWith(fromExt) && !fs.existsSync(resolvedPath)) {
+        const withoutExt = resolvedPath.slice(0, -fromExt.length);
+        for (const toExt of toExts) {
+          if (fs.existsSync(withoutExt + toExt)) {
+            return path.normalize(withoutExt + toExt);
+          }
+        }
       }
     }
 
