@@ -7,9 +7,60 @@ export interface ParsedDependencies {
   dynamic: string[];
 }
 
+interface TsConfigPaths {
+  baseUrl: string;
+  paths: Record<string, string[]>;
+}
+
+function loadTsConfigPaths(cwd: string): TsConfigPaths | null {
+  for (const configFile of ['tsconfig.json', 'jsconfig.json']) {
+    const configPath = path.resolve(cwd, configFile);
+    if (!fs.existsSync(configPath)) continue;
+
+    try {
+      const content = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      const compilerOptions = content?.compilerOptions;
+      if (!compilerOptions) continue;
+
+      const baseUrl = compilerOptions.baseUrl || '.';
+      const paths = compilerOptions.paths || {};
+
+      if (Object.keys(paths).length > 0) {
+        return { baseUrl, paths };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function resolveWithPaths(specifier: string, tsConfigPaths: TsConfigPaths, cwd: string): string | null {
+  const { baseUrl, paths } = tsConfigPaths;
+  const baseUrlResolved = path.resolve(cwd, baseUrl);
+
+  for (const [pattern, mappings] of Object.entries(paths)) {
+    const regexStr = pattern
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\\\*/g, '(.+)');
+    const regex = new RegExp(`^${regexStr}$`);
+    const match = specifier.match(regex);
+
+    if (!match) continue;
+
+    for (const mapping of mappings) {
+      const resolved = mapping.replace('*', match[1]);
+      const fullPath = path.resolve(baseUrlResolved, resolved);
+      return fullPath;
+    }
+  }
+  return null;
+}
+
 export class ImportParser {
   private project: Project;
   private extensions: string[];
+  private tsConfigPaths: TsConfigPaths | null;
 
   constructor(extensions: string[]) {
     this.extensions = extensions;
@@ -20,6 +71,7 @@ export class ImportParser {
       },
       skipAddingFilesFromTsConfig: true,
     });
+    this.tsConfigPaths = loadTsConfigPaths(process.cwd());
   }
 
   public parseFile(filePath: string): ParsedDependencies {
@@ -88,6 +140,15 @@ export class ImportParser {
         if (resolved) return resolved;
       }
       
+      // tsconfig/jsconfig paths resolution
+      if (this.tsConfigPaths) {
+        const mapped = resolveWithPaths(specifier, this.tsConfigPaths, process.cwd());
+        if (mapped) {
+          const resolved = this.tryResolve(mapped);
+          if (resolved) return resolved;
+        }
+      }
+
       // Basic alias support for @/ and ~/
       if (specifier.startsWith('@/') || specifier.startsWith('~/')) {
         const relativeSpecifier = specifier.substring(2);
@@ -115,7 +176,7 @@ export class ImportParser {
     const esmFallbackMap: Record<string, string[]> = {
       '.js': ['.ts', '.tsx'],
       '.jsx': ['.tsx'],
-      '.mjs': ['.mts', '.mts'],
+      '.mjs': ['.mts'],
       '.cjs': ['.cts'],
     };
 
