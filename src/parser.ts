@@ -82,53 +82,61 @@ export class ImportParser {
       if (!fs.existsSync(filePath)) {
         return deps;
       }
-      sourceFile = this.project.addSourceFileAtPath(filePath);
-    }
-
-    // 1. Static imports: `import x from 'y'`
-    for (const decl of sourceFile.getImportDeclarations()) {
-      const mod = decl.getModuleSpecifierValue();
-      if (mod) {
-        const resolved = this.resolveModulePath(filePath, mod);
-        if (resolved) deps.static.push(resolved);
+      try {
+        sourceFile = this.project.addSourceFileAtPath(filePath);
+      } catch {
+        return deps;
       }
     }
 
-    // 2. Export declarations: `export * from 'y'`
-    for (const decl of sourceFile.getExportDeclarations()) {
-      if (decl.hasModuleSpecifier()) {
+    try {
+      // 1. Static imports: `import x from 'y'`
+      for (const decl of sourceFile.getImportDeclarations()) {
         const mod = decl.getModuleSpecifierValue();
         if (mod) {
           const resolved = this.resolveModulePath(filePath, mod);
           if (resolved) deps.static.push(resolved);
         }
       }
-    }
 
-    // 3. Requires and dynamic imports
-    sourceFile.forEachDescendant(node => {
-      if (Node.isCallExpression(node)) {
-        const expression = node.getExpression();
-        
-        // require('y')
-        if (Node.isIdentifier(expression) && expression.getText() === 'require') {
-          const args = node.getArguments();
-          if (args.length > 0 && Node.isStringLiteral(args[0])) {
-            const resolved = this.resolveModulePath(filePath, args[0].getLiteralValue());
+      // 2. Export declarations: `export * from 'y'`
+      for (const decl of sourceFile.getExportDeclarations()) {
+        if (decl.hasModuleSpecifier()) {
+          const mod = decl.getModuleSpecifierValue();
+          if (mod) {
+            const resolved = this.resolveModulePath(filePath, mod);
             if (resolved) deps.static.push(resolved);
           }
         }
-        
-        // import('y')
-        if (node.getExpression().getKind() === SyntaxKind.ImportKeyword) {
-          const args = node.getArguments();
-          if (args.length > 0 && Node.isStringLiteral(args[0])) {
-            const resolved = this.resolveModulePath(filePath, args[0].getLiteralValue());
-            if (resolved) deps.dynamic.push(resolved);
+      }
+
+      // 3. Requires and dynamic imports
+      sourceFile.forEachDescendant(node => {
+        if (Node.isCallExpression(node)) {
+          const expression = node.getExpression();
+          
+          // require('y')
+          if (Node.isIdentifier(expression) && expression.getText() === 'require') {
+            const args = node.getArguments();
+            if (args.length > 0 && Node.isStringLiteral(args[0])) {
+              const resolved = this.resolveModulePath(filePath, args[0].getLiteralValue());
+              if (resolved) deps.static.push(resolved);
+            }
+          }
+          
+          // import('y')
+          if (node.getExpression().getKind() === SyntaxKind.ImportKeyword) {
+            const args = node.getArguments();
+            if (args.length > 0 && Node.isStringLiteral(args[0])) {
+              const resolved = this.resolveModulePath(filePath, args[0].getLiteralValue());
+              if (resolved) deps.dynamic.push(resolved);
+            }
           }
         }
-      }
-    });
+      });
+    } catch {
+      // Return whatever we've collected so far
+    }
 
     return deps;
   }

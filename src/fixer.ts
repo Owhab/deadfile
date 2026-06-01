@@ -41,7 +41,13 @@ export class ImportFixer {
       return null;
     }
 
-    const sourceFile = this.project.addSourceFileAtPath(filePath);
+    let sourceFile: SourceFile;
+    try {
+      sourceFile = this.project.addSourceFileAtPath(filePath);
+    } catch {
+      return null;
+    }
+
     const result: FileFixResult = {
       file: filePath,
       removedImports: [],
@@ -49,31 +55,36 @@ export class ImportFixer {
       organized: false,
     };
 
-    const unusedSpecs = this.findUnusedImports(sourceFile);
+    try {
+      const unusedSpecs = this.findUnusedImports(sourceFile);
 
-    for (const spec of unusedSpecs) {
-      if (spec.namedSpecifier) {
-        spec.namedSpecifier.remove();
-        result.removedImports.push(spec.specifier);
-      } else {
-        spec.importDecl.remove();
-        result.removedImports.push(spec.specifier);
+      for (const spec of unusedSpecs) {
+        if (spec.namedSpecifier) {
+          spec.namedSpecifier.remove();
+          result.removedImports.push(spec.specifier);
+        } else {
+          spec.importDecl.remove();
+          result.removedImports.push(spec.specifier);
+        }
       }
+
+      const unusedDecls = this.findUnusedDeclarations(sourceFile);
+      for (const decl of unusedDecls) {
+        const name = decl.getName();
+        decl.remove();
+        if (name) {
+          result.removedDeclarations.push(name);
+        }
+      }
+
+      this.organizeImports(sourceFile);
+      result.organized = true;
+
+      sourceFile.saveSync();
+    } catch {
+      return null;
     }
 
-    const unusedDecls = this.findUnusedDeclarations(sourceFile);
-    for (const decl of unusedDecls) {
-      const name = decl.getName();
-      decl.remove();
-      if (name) {
-        result.removedDeclarations.push(name);
-      }
-    }
-
-    this.organizeImports(sourceFile);
-    result.organized = true;
-
-    sourceFile.saveSync();
     return result;
   }
 
@@ -82,24 +93,34 @@ export class ImportFixer {
       return null;
     }
 
-    const sourceFile = this.project.addSourceFileAtPath(filePath);
+    let sourceFile: SourceFile;
+    try {
+      sourceFile = this.project.addSourceFileAtPath(filePath);
+    } catch {
+      return null;
+    }
+
     const result: FileAnalysisResult = {
       file: filePath,
       unusedImports: [],
       unusedDeclarations: [],
     };
 
-    const unusedImports = this.findUnusedImports(sourceFile);
-    for (const imp of unusedImports) {
-      result.unusedImports.push(imp.specifier);
-    }
-
-    const unusedDecls = this.findUnusedDeclarations(sourceFile);
-    for (const decl of unusedDecls) {
-      const name = decl.getName();
-      if (name) {
-        result.unusedDeclarations.push(name);
+    try {
+      const unusedImports = this.findUnusedImports(sourceFile);
+      for (const imp of unusedImports) {
+        result.unusedImports.push(imp.specifier);
       }
+
+      const unusedDecls = this.findUnusedDeclarations(sourceFile);
+      for (const decl of unusedDecls) {
+        const name = decl.getName();
+        if (name) {
+          result.unusedDeclarations.push(name);
+        }
+      }
+    } catch {
+      return null;
     }
 
     return result;
