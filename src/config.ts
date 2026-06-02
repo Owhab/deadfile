@@ -30,6 +30,16 @@ const DEFAULT_CONFIG: CodePruneConfig = {
   ignore: [],
 };
 
+function ensureStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === 'string');
+  }
+  if (typeof value === 'string') {
+    return [value];
+  }
+  return [];
+}
+
 export function loadConfig(customPath?: string): CodePruneConfig {
   const configPath = customPath 
     ? path.resolve(process.cwd(), customPath)
@@ -39,9 +49,19 @@ export function loadConfig(customPath?: string): CodePruneConfig {
     try {
       const fileContent = fs.readFileSync(configPath, 'utf-8');
       const parsed = JSON.parse(fileContent);
+
+      const parsedInclude = ensureStringArray(parsed.include);
+      const parsedExclude = ensureStringArray(parsed.exclude);
+      const parsedExtensions = ensureStringArray(parsed.extensions);
+      const parsedEntry = ensureStringArray(parsed.entry);
+      const parsedIgnore = ensureStringArray(parsed.ignore);
+
       return {
-        ...DEFAULT_CONFIG,
-        ...parsed,
+        include: parsedInclude.length > 0 ? parsedInclude : DEFAULT_CONFIG.include,
+        exclude: [...DEFAULT_CONFIG.exclude, ...parsedExclude],
+        extensions: parsedExtensions.length > 0 ? parsedExtensions : DEFAULT_CONFIG.extensions,
+        entry: parsedEntry.length > 0 ? parsedEntry : DEFAULT_CONFIG.entry,
+        ignore: [...DEFAULT_CONFIG.ignore, ...parsedIgnore],
       };
     } catch (error: any) {
       console.error(`Error parsing config file at ${configPath}:`, error.message);
