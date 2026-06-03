@@ -409,10 +409,33 @@ program
     const timeTaken = ((Date.now() - startTime) / 1000).toFixed(1);
 
     if (isJson) {
-      console.log(JSON.stringify({
+      const output: Record<string, unknown> = {
         unused: result.unusedFiles.map(f => path.relative(cwd, f)),
-        possiblyUnused: result.possiblyUnusedFiles.map(f => path.relative(cwd, f))
-      }, null, 2));
+        possiblyUnused: result.possiblyUnusedFiles.map(f => path.relative(cwd, f)),
+      };
+
+      if (options.fixImports) {
+        const fixer = new ImportFixer(config.extensions);
+        const unusedImports: { file: string; imports: string[] }[] = [];
+        const unusedDeclarations: { file: string; declarations: string[] }[] = [];
+
+        for (const file of files) {
+          const analysis = fixer.analyzeFile(file);
+          if (analysis) {
+            if (analysis.unusedImports.length > 0) {
+              unusedImports.push({ file: path.relative(cwd, file), imports: analysis.unusedImports });
+            }
+            if (analysis.unusedDeclarations.length > 0) {
+              unusedDeclarations.push({ file: path.relative(cwd, file), declarations: analysis.unusedDeclarations });
+            }
+          }
+        }
+
+        output.unusedImports = unusedImports;
+        output.unusedDeclarations = unusedDeclarations;
+      }
+
+      console.log(JSON.stringify(output, null, 2));
     } else {
       console.log('');
       console.log(chalk.red(`❌ Unused Files (${result.unusedFiles.length}):`));
