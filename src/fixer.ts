@@ -1,6 +1,22 @@
-import { Project, SyntaxKind, Node, ImportDeclaration, ImportSpecifier, SourceFile, VariableDeclaration, FunctionDeclaration, ClassDeclaration, TypeAliasDeclaration, InterfaceDeclaration, MethodDeclaration, PropertyDeclaration, ParameterDeclaration, BindingElement } from 'ts-morph';
-import path from 'path';
-import fs from 'fs';
+import {
+  Project,
+  SyntaxKind,
+  Node,
+  ImportDeclaration,
+  ImportSpecifier,
+  SourceFile,
+  VariableDeclaration,
+  FunctionDeclaration,
+  ClassDeclaration,
+  TypeAliasDeclaration,
+  InterfaceDeclaration,
+  MethodDeclaration,
+  PropertyDeclaration,
+  ParameterDeclaration,
+  BindingElement,
+} from "ts-morph";
+import path from "path";
+import fs from "fs";
 
 interface FileFixResult {
   file: string;
@@ -13,6 +29,12 @@ export interface FileAnalysisResult {
   file: string;
   unusedImports: string[];
   unusedDeclarations: string[];
+}
+
+interface UnusedImportEntry {
+  importDecl: ImportDeclaration;
+  specifier: string;
+  namedSpecifier?: ImportSpecifier;
 }
 
 export class ImportFixer {
@@ -35,7 +57,13 @@ export class ImportFixer {
       return null;
     }
 
-    const sourceFile = this.project.addSourceFileAtPath(filePath);
+    let sourceFile: SourceFile;
+    try {
+      sourceFile = this.project.addSourceFileAtPath(filePath);
+    } catch {
+      return null;
+    }
+
     const result: FileFixResult = {
       file: filePath,
       removedImports: [],
@@ -43,27 +71,36 @@ export class ImportFixer {
       organized: false,
     };
 
-    const unusedSpecs = this.findUnusedImports(sourceFile);
-    
-    for (const spec of unusedSpecs) {
-      const importDecl = spec.importDecl;
-      importDecl.remove();
-      result.removedImports.push(spec.specifier);
-    }
+    try {
+      const unusedSpecs = this.findUnusedImports(sourceFile);
 
-    const unusedDecls = this.findUnusedDeclarations(sourceFile);
-    for (const decl of unusedDecls) {
-      const name = decl.getName();
-      decl.remove();
-      if (name) {
-        result.removedDeclarations.push(name);
+      for (const spec of unusedSpecs) {
+        if (spec.namedSpecifier) {
+          spec.namedSpecifier.remove();
+          result.removedImports.push(spec.specifier);
+        } else {
+          spec.importDecl.remove();
+          result.removedImports.push(spec.specifier);
+        }
       }
+
+      const unusedDecls = this.findUnusedDeclarations(sourceFile);
+      for (const decl of unusedDecls) {
+        const name = decl.getName();
+        decl.remove();
+        if (name) {
+          result.removedDeclarations.push(name);
+        }
+      }
+
+      this.organizeImports(sourceFile);
+      result.organized = true;
+
+      sourceFile.saveSync();
+    } catch {
+      return null;
     }
 
-    this.organizeImports(sourceFile);
-    result.organized = true;
-
-    sourceFile.saveSync();
     return result;
   }
 
@@ -72,41 +109,41 @@ export class ImportFixer {
       return null;
     }
 
-    const sourceFile = this.project.addSourceFileAtPath(filePath);
+    let sourceFile: SourceFile;
+    try {
+      sourceFile = this.project.addSourceFileAtPath(filePath);
+    } catch {
+      return null;
+    }
+
     const result: FileAnalysisResult = {
       file: filePath,
       unusedImports: [],
       unusedDeclarations: [],
     };
 
-    const unusedImports = this.findUnusedImports(sourceFile);
-    for (const imp of unusedImports) {
-      result.unusedImports.push(imp.specifier);
-    }
-
-    const unusedDecls = this.findUnusedDeclarations(sourceFile);
-    for (const decl of unusedDecls) {
-      const name = decl.getName();
-      if (name) {
-        result.unusedDeclarations.push(name);
+    try {
+      const unusedImports = this.findUnusedImports(sourceFile);
+      for (const imp of unusedImports) {
+        result.unusedImports.push(imp.specifier);
       }
+
+      const unusedDecls = this.findUnusedDeclarations(sourceFile);
+      for (const decl of unusedDecls) {
+        const name = decl.getName();
+        if (name) {
+          result.unusedDeclarations.push(name);
+        }
+      }
+    } catch {
+      return null;
     }
 
     return result;
   }
 
   private findUnusedDeclarations(sourceFile: SourceFile): any[] {
-    const usedNames = new Set<string>();
     const declarations = new Map<string, any>();
-
-    sourceFile.forEachDescendant((node) => {
-      if (Node.isIdentifier(node)) {
-        const text = node.getText();
-        if (text && /^[a-zA-Z_]/.test(text)) {
-          usedNames.add(text);
-        }
-      }
-    });
 
     for (const func of sourceFile.getFunctions()) {
       const name = func.getName();
@@ -135,6 +172,18 @@ export class ImportFixer {
       }
     }
 
+    const declarationNames = new Set<string>(declarations.keys());
+    const usedNames = new Set<string>();
+
+    sourceFile.forEachDescendant((node) => {
+      if (Node.isIdentifier(node)) {
+        const text = node.getText();
+        if (text && /^[a-zA-Z_$]/.test(text) && !declarationNames.has(text)) {
+          usedNames.add(text);
+        }
+      }
+    });
+
     const unused: any[] = [];
     for (const [name, decl] of declarations) {
       if (!usedNames.has(name)) {
@@ -145,14 +194,14 @@ export class ImportFixer {
     return unused;
   }
 
-  private findUnusedImports(sourceFile: SourceFile): { importDecl: ImportDeclaration; specifier: string }[] {
-    const unused: { importDecl: ImportDeclaration; specifier: string }[] = [];
+  private findUnusedImports(sourceFile: SourceFile): UnusedImportEntry[] {
+    const unused: UnusedImportEntry[] = [];
     const usedNames = new Set<string>();
 
     sourceFile.forEachDescendant((node) => {
       if (Node.isIdentifier(node)) {
         const text = node.getText();
-        if (text && /^[a-z_]/.test(text)) {
+        if (text && /^[a-zA-Z_$]/.test(text)) {
           usedNames.add(text);
         }
       }
@@ -179,10 +228,9 @@ export class ImportFixer {
       }
 
       for (const named of namedImports) {
-        const name = named.getText();
+        const name = named.getName();
         if (!usedNames.has(name)) {
-          unused.push({ importDecl: decl, specifier });
-          break;
+          unused.push({ importDecl: decl, specifier, namedSpecifier: named });
         }
       }
     }
@@ -199,34 +247,34 @@ export class ImportFixer {
 
     for (const imp of imports) {
       const spec = imp.getModuleSpecifierValue();
-      if (spec.startsWith('.') || spec.startsWith('/')) {
+      if (spec.startsWith(".") || spec.startsWith("/")) {
         relative.push(imp);
       } else {
         external.push(imp);
       }
     }
 
-    const body = sourceFile.getStatements();
-    const firstStatement = body[0];
-    
-    if (!firstStatement) return;
-
-    const insertPos = firstStatement.getStart();
     const texts: string[] = [];
 
     for (const imp of external) {
-      texts.push(imp.getFullText());
+      texts.push(imp.getFullText().trim());
       imp.remove();
     }
     for (const imp of relative) {
-      texts.push(imp.getFullText());
+      texts.push(imp.getFullText().trim());
       imp.remove();
     }
+
+    const body = sourceFile.getStatements();
+    const firstStatement = body[0];
+
+    if (!firstStatement) return;
+
+    const insertPos = firstStatement.getStart();
 
     const externalSpecs = texts.slice(0, external.length).sort();
     const relativeSpecs = texts.slice(external.length).sort();
     const sortedTexts = [...externalSpecs, ...relativeSpecs];
-    
-    sourceFile.insertText(insertPos, sortedTexts.join('\n') + '\n\n');
+    sourceFile.insertText(insertPos, sortedTexts.join("\n") + "\n\n");
   }
 }

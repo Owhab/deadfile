@@ -7,9 +7,60 @@ export interface ParsedDependencies {
   dynamic: string[];
 }
 
+interface TsConfigPaths {
+  baseUrl: string;
+  paths: Record<string, string[]>;
+}
+
+function loadTsConfigPaths(cwd: string): TsConfigPaths | null {
+  for (const configFile of ['tsconfig.json', 'jsconfig.json']) {
+    const configPath = path.resolve(cwd, configFile);
+    if (!fs.existsSync(configPath)) continue;
+
+    try {
+      const content = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      const compilerOptions = content?.compilerOptions;
+      if (!compilerOptions) continue;
+
+      const baseUrl = compilerOptions.baseUrl || '.';
+      const paths = compilerOptions.paths || {};
+
+      if (Object.keys(paths).length > 0) {
+        return { baseUrl, paths };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+function resolveWithPaths(specifier: string, tsConfigPaths: TsConfigPaths, cwd: string): string | null {
+  const { baseUrl, paths } = tsConfigPaths;
+  const baseUrlResolved = path.resolve(cwd, baseUrl);
+
+  for (const [pattern, mappings] of Object.entries(paths)) {
+    const regexStr = pattern
+      .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\\\*/g, '(.+)');
+    const regex = new RegExp(`^${regexStr}$`);
+    const match = specifier.match(regex);
+
+    if (!match) continue;
+
+    for (const mapping of mappings) {
+      const resolved = mapping.replace('*', match[1]);
+      const fullPath = path.resolve(baseUrlResolved, resolved);
+      return fullPath;
+    }
+  }
+  return null;
+}
+
 export class ImportParser {
   private project: Project;
   private extensions: string[];
+  private tsConfigPaths: TsConfigPaths | null;
 
   constructor(extensions: string[]) {
     this.extensions = extensions;
@@ -20,6 +71,7 @@ export class ImportParser {
       },
       skipAddingFilesFromTsConfig: true,
     });
+    this.tsConfigPaths = loadTsConfigPaths(process.cwd());
   }
 
   public parseFile(filePath: string): ParsedDependencies {
@@ -30,53 +82,61 @@ export class ImportParser {
       if (!fs.existsSync(filePath)) {
         return deps;
       }
-      sourceFile = this.project.addSourceFileAtPath(filePath);
-    }
-
-    // 1. Static imports: `import x from 'y'`
-    for (const decl of sourceFile.getImportDeclarations()) {
-      const mod = decl.getModuleSpecifierValue();
-      if (mod) {
-        const resolved = this.resolveModulePath(filePath, mod);
-        if (resolved) deps.static.push(resolved);
+      try {
+        sourceFile = this.project.addSourceFileAtPath(filePath);
+      } catch {
+        return deps;
       }
     }
 
-    // 2. Export declarations: `export * from 'y'`
-    for (const decl of sourceFile.getExportDeclarations()) {
-      if (decl.hasModuleSpecifier()) {
+    try {
+      // 1. Static imports: `import x from 'y'`
+      for (const decl of sourceFile.getImportDeclarations()) {
         const mod = decl.getModuleSpecifierValue();
         if (mod) {
           const resolved = this.resolveModulePath(filePath, mod);
           if (resolved) deps.static.push(resolved);
         }
       }
-    }
 
-    // 3. Requires and dynamic imports
-    sourceFile.forEachDescendant(node => {
-      if (Node.isCallExpression(node)) {
-        const expression = node.getExpression();
-        
-        // require('y')
-        if (Node.isIdentifier(expression) && expression.getText() === 'require') {
-          const args = node.getArguments();
-          if (args.length > 0 && Node.isStringLiteral(args[0])) {
-            const resolved = this.resolveModulePath(filePath, args[0].getLiteralValue());
+      // 2. Export declarations: `export * from 'y'`
+      for (const decl of sourceFile.getExportDeclarations()) {
+        if (decl.hasModuleSpecifier()) {
+          const mod = decl.getModuleSpecifierValue();
+          if (mod) {
+            const resolved = this.resolveModulePath(filePath, mod);
             if (resolved) deps.static.push(resolved);
           }
         }
-        
-        // import('y')
-        if (node.getExpression().getKind() === SyntaxKind.ImportKeyword) {
-          const args = node.getArguments();
-          if (args.length > 0 && Node.isStringLiteral(args[0])) {
-            const resolved = this.resolveModulePath(filePath, args[0].getLiteralValue());
-            if (resolved) deps.dynamic.push(resolved);
+      }
+
+      // 3. Requires and dynamic imports
+      sourceFile.forEachDescendant(node => {
+        if (Node.isCallExpression(node)) {
+          const expression = node.getExpression();
+          
+          // require('y')
+          if (Node.isIdentifier(expression) && expression.getText() === 'require') {
+            const args = node.getArguments();
+            if (args.length > 0 && Node.isStringLiteral(args[0])) {
+              const resolved = this.resolveModulePath(filePath, args[0].getLiteralValue());
+              if (resolved) deps.static.push(resolved);
+            }
+          }
+          
+          // import('y')
+          if (node.getExpression().getKind() === SyntaxKind.ImportKeyword) {
+            const args = node.getArguments();
+            if (args.length > 0 && Node.isStringLiteral(args[0])) {
+              const resolved = this.resolveModulePath(filePath, args[0].getLiteralValue());
+              if (resolved) deps.dynamic.push(resolved);
+            }
           }
         }
-      }
-    });
+      });
+    } catch {
+      // Return whatever we've collected so far
+    }
 
     return deps;
   }
@@ -88,6 +148,15 @@ export class ImportParser {
         if (resolved) return resolved;
       }
       
+      // tsconfig/jsconfig paths resolution
+      if (this.tsConfigPaths) {
+        const mapped = resolveWithPaths(specifier, this.tsConfigPaths, process.cwd());
+        if (mapped) {
+          const resolved = this.tryResolve(mapped);
+          if (resolved) return resolved;
+        }
+      }
+
       // Basic alias support for @/ and ~/
       if (specifier.startsWith('@/') || specifier.startsWith('~/')) {
         const relativeSpecifier = specifier.substring(2);
@@ -112,14 +181,21 @@ export class ImportParser {
   }
 
   private tryResolve(resolvedPath: string): string | null {
-    // Handle ESM imports where specifier has .js but the file is .ts or .tsx
-    if (resolvedPath.endsWith('.js') && !fs.existsSync(resolvedPath)) {
-      const withoutExt = resolvedPath.slice(0, -3);
-      if (fs.existsSync(withoutExt + '.ts')) {
-        return path.normalize(withoutExt + '.ts');
-      }
-      if (fs.existsSync(withoutExt + '.tsx')) {
-        return path.normalize(withoutExt + '.tsx');
+    const esmFallbackMap: Record<string, string[]> = {
+      '.js': ['.ts', '.tsx'],
+      '.jsx': ['.tsx'],
+      '.mjs': ['.mts'],
+      '.cjs': ['.cts'],
+    };
+
+    for (const [fromExt, toExts] of Object.entries(esmFallbackMap)) {
+      if (resolvedPath.endsWith(fromExt) && !fs.existsSync(resolvedPath)) {
+        const withoutExt = resolvedPath.slice(0, -fromExt.length);
+        for (const toExt of toExts) {
+          if (fs.existsSync(withoutExt + toExt)) {
+            return path.normalize(withoutExt + toExt);
+          }
+        }
       }
     }
 
