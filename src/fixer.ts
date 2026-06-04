@@ -1,6 +1,22 @@
-import { Project, SyntaxKind, Node, ImportDeclaration, ImportSpecifier, SourceFile, VariableDeclaration, FunctionDeclaration, ClassDeclaration, TypeAliasDeclaration, InterfaceDeclaration, MethodDeclaration, PropertyDeclaration, ParameterDeclaration, BindingElement } from 'ts-morph';
-import path from 'path';
-import fs from 'fs';
+import {
+  Project,
+  SyntaxKind,
+  Node,
+  ImportDeclaration,
+  ImportSpecifier,
+  SourceFile,
+  VariableDeclaration,
+  FunctionDeclaration,
+  ClassDeclaration,
+  TypeAliasDeclaration,
+  InterfaceDeclaration,
+  MethodDeclaration,
+  PropertyDeclaration,
+  ParameterDeclaration,
+  BindingElement,
+} from "ts-morph";
+import path from "path";
+import fs from "fs";
 
 interface FileFixResult {
   file: string;
@@ -231,7 +247,7 @@ export class ImportFixer {
 
     for (const imp of imports) {
       const spec = imp.getModuleSpecifierValue();
-      if (spec.startsWith('.') || spec.startsWith('/')) {
+      if (spec.startsWith(".") || spec.startsWith("/")) {
         relative.push(imp);
       } else {
         external.push(imp);
@@ -259,7 +275,6 @@ export class ImportFixer {
     const externalSpecs = texts.slice(0, external.length).sort();
     const relativeSpecs = texts.slice(external.length).sort();
     const sortedTexts = [...externalSpecs, ...relativeSpecs];
-
-    sourceFile.insertText(insertPos, sortedTexts.join('\n') + '\n\n');
+    sourceFile.insertText(insertPos, sortedTexts.join("\n") + "\n\n");
   }
 }
